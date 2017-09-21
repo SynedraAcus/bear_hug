@@ -1,0 +1,210 @@
+"""
+An object-oriented bearlibterminal wrapper with the support for complex ASCII
+art and widget-like behaviour.
+"""
+
+from bearlibterminal import terminal
+from bear_utilities import shapes_equal, copy_shape
+from copy import copy
+
+
+class BearTerminal:
+    """
+    A main terminal class.
+    Accepts bearlibterminal library configuration options as kwargs.
+    """
+    # kwargs to init are passed to bearlibterminal.terminal.set()
+    # Currently only library settings are supported
+    accepted_kwargs = {'encoding': 'terminal', 'size': 'window',
+                       'cellsize': 'window', 'title': 'window', 'icon':'window',
+                       'resizeable': 'window', 'fullscreen': 'window',
+                       
+                       'filter': 'input', 'precise-mouse': 'input',
+                       'mouse-cursor': 'input', 'cursor-symbol': 'input',
+                       'cursor-blink-rate': 'input', 'alt-functions': 'input',
+    
+                       'postformatting': 'output', 'vsync': 'output',
+                       'tab-width': 'output',
+                       
+                       'file': 'log', 'level':'log', 'mode': 'log'
+                       }
+    
+    def __init__(self, *args, **kwargs):
+        if kwargs:
+            if any(x not in self.accepted_kwargs for x in kwargs.keys()):
+                raise BearException('Only bearlibterminal library settings accepted'
+                                    +' as kwargs for BearTerminal')
+            self.outstring = ';'.join('{}.{}={}'.format(self.accepted_kwargs[x], x,
+                                                         str(kwargs[x]))
+                                 for x in kwargs)+';'
+        self.drawables = {}
+        self.default_color = 'white'
+    
+    def start(self):
+        """
+        Open a terminal and place it on the screen.
+        :return:
+        """
+        terminal.open()
+        terminal.set(self.outstring)
+        self.refresh()
+        
+    def clear(self):
+        """
+        Remove all drawables from this terminal
+        :return:
+        """
+        drawables = copy(self.drawables)
+        for drawable in drawables:
+            self.remove_drawable(drawable, refresh=False)
+        self.refresh()
+
+    def add_drawable(self, drawable,
+                     pos=(0, 0), layer=0, refresh=True):
+        """
+        Add a drawable to the terminal.
+        Doesn't check for overlap and potentially overwrites any drawables
+        present in the area.
+        :param drawable: a Drawable instance
+        :param pos: top left corner of the drawable
+        :param layer: layer to place the drawable on
+        :param refresh: whether to refresh terminal after adding the drawable.
+        If this is False, the drawable will be invisible until the next
+        `terminal.refresh()` call
+        :return:
+        """
+        self.drawables[drawable] = DrawableLocation(pos=pos, layer=layer)
+        terminal.layer(layer)
+        running_color = 'white'
+        for y in range(len(drawable.chars)):
+            for x in range(len(drawable.chars[y])):
+                if drawable.colors[y][x] != running_color:
+                    running_color = drawable.colors[y][x]
+                    terminal.color(running_color)
+                terminal.put(pos[0]+x, pos[1]+y, drawable.chars[y][x])
+        if running_color != self.default_color:
+            terminal.color(self.default_color)
+        if refresh:
+            self.refresh()
+        
+    def remove_drawable(self, drawable, refresh=True):
+        """
+        Remove drawable from the terminal
+        #TODO: check for other drawables that can become visible once this one
+        is destroyed
+        :param drawable:
+        :param refresh: whether to refresh the terminal after removing drawable.
+        If this is False, the drawable will be visible until the next
+        `terminal.refresh()` call
+        :return:
+        """
+        corner = self.drawables[drawable].pos
+        terminal.layer(self.drawables[drawable].layer)
+        terminal.clear_area(*corner, len(drawable.chars[0]), len(drawable.chars))
+        if refresh:
+            self.refresh()
+        del(self.drawables[drawable])
+        
+    def move_drawable(self, drawable, pos):
+        """
+        Move drawable to a new position.
+        Does not change the layer.
+        :param drawable:
+        :param pos:
+        :return:
+        """
+        layer = self.drawables[drawable].layer
+        self.remove_drawable(drawable)
+        self.add_drawable(drawable, pos=pos, layer=layer)
+    
+    def refresh(self):
+        terminal.refresh()
+        
+    def close(self):
+        terminal.close()
+    
+
+#  Widget classes
+class Drawable:
+    """
+    The base class for things that can be placed on the terminal.
+    This class is inactive and is intended for purely decorative non-animated
+    objects. Event processing and animations are covered by its subclasses.
+    
+    Accepted parameters:
+    `chars`: a list of unicode characters
+    `colors`: a list of colors. Anything that is accepted by terminal.color()
+    goes here (a color name or an 0xAARRGGBB integer)
+    """
+    def __init__(self, chars, colors):
+        if not isinstance(chars, list) or not isinstance(colors, list):
+            raise BearException('Chars and colors should be lists')
+        if not shapes_equal(chars, colors):
+            raise BearException('Chars and colors should have the same shape')
+        self.chars = chars
+        self.colors = colors
+        
+
+class Label(Drawable):
+    """
+    A drawable that displays text.
+    Accepts only a single string, whether single- or multiline.
+    Does not (yet) support complex text markup used by bearlibterminal
+    :param text: string to be displayed
+    :param just: one of 'left', 'right' or 'center'. Default 'left'
+    :param color: bearlibterminal-compatible color. Default 'white'
+    :param width: text area width. Defaults to the length of the longest
+    substring in `text`
+    """
+    def __init__(self, text,
+                 just='left', color='white', width = None):
+        chars = Label._generate_chars(text, width, just)
+        colors = copy_shape(chars, color)
+        super().__init__(chars, colors)
+    
+    @classmethod
+    def _generate_chars(cls, text, width, just):
+        """
+        Internal method that generates a justified char list for the Label
+        :param text:
+        :param just:
+        :return:
+        """
+        
+        def justify(line, width, just_type):
+            if len(line) < width:
+                if just_type == 'left':
+                    return line.ljust(width)
+                elif just_type == 'right':
+                    return line.rjust(width)
+                elif just_type == 'center':
+                    lj = width - int((width-len(line))/2)
+                    return line.ljust(lj).rjust(width)
+                else:
+                    raise BearException('Justification should be \'left\', \'right\' or \'center\'')
+            else:
+                return line
+        
+        lines = text.split('\n')
+        if not width:
+            width = max(len(x) for x in lines)
+        return [list(justify(x, width, just)) for x in lines]
+        
+    
+class Widget(Drawable):
+    def __init__(self):
+        raise NotImplementedError('Widgets are yet to be implemented')
+
+
+#  Service classes
+
+class BearException(Exception):
+    pass
+
+class DrawableLocation:
+    """
+    Data class with position and layer of a Drawable
+    """
+    def __init__(self, pos, layer):
+        self.pos = pos
+        self.layer = layer
