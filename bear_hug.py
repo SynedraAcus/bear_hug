@@ -91,6 +91,13 @@ class BearTerminal:
         `terminal.refresh()` call
         :return:
         """
+        if drawable in self.drawable_locations.keys():
+            raise BearException('Cannot add the same drawable twice')
+        for y in range(len(drawable.chars)):
+            for x in range(len(drawable.chars[0])):
+                if self._drawable_pointers[layer] and \
+                        self._drawable_pointers[layer][pos[0]+x][pos[1]+y]:
+                    raise BearException('Drawables cannot collide within a layer')
         self.drawable_locations[drawable] = DrawableLocation(pos=pos, layer=layer)
         terminal.layer(layer)
         running_color = 'white'
@@ -99,6 +106,7 @@ class BearTerminal:
             width, height = (int(x) for x in size.split('x'))
             self._drawable_pointers[layer] = [[None for y in range(height)]
                                               for x in range(width)]
+
         for y in range(len(drawable.chars)):
             for x in range(len(drawable.chars[y])):
                 if drawable.colors[y][x] != running_color:
