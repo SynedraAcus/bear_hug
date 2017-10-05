@@ -37,6 +37,8 @@ class BearTerminal:
             self.outstring = ';'.join('{}.{}={}'.format(self.accepted_kwargs[x], x,
                                                          str(kwargs[x]))
                                  for x in kwargs)+';'
+        else:
+            self.outstring = None
         self.drawable_locations = {}
         #  This will be one list of drawable pointers per layer. Lists are
         #  not actually allocated until at least one Drawable is added to layer
@@ -53,7 +55,8 @@ class BearTerminal:
         :return:
         """
         terminal.open()
-        terminal.set(self.outstring)
+        if self.outstring:
+            terminal.set(self.outstring)
         self.refresh()
         
     def clear(self):
