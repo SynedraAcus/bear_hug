@@ -37,9 +37,16 @@ class BearTerminal:
             self.outstring = ';'.join('{}.{}={}'.format(self.accepted_kwargs[x], x,
                                                          str(kwargs[x]))
                                  for x in kwargs)+';'
-        self.drawables = {}
+        self.drawable_locations = {}
+        #  This will be one list of drawable pointers per layer. Lists are
+        #  not actually allocated until at least one Drawable is added to layer
+        #  Lists are created when adding the first Drawable and are never
+        #  destroyed or resized.
+        self._drawable_pointers = [None for x in range(256)]
         self.default_color = 'white'
-    
+
+    #  Methods that replicate or wraparound blt's functions
+
     def start(self):
         """
         Open a terminal and place it on the screen.
@@ -51,19 +58,27 @@ class BearTerminal:
         
     def clear(self):
         """
-        Remove all drawables from this terminal
+        Remove all drawable_locations from this terminal
         :return:
         """
-        drawables = copy(self.drawables)
+        drawables = copy(self.drawable_locations)
         for drawable in drawables:
             self.remove_drawable(drawable, refresh=False)
         self.refresh()
+
+    def refresh(self):
+        terminal.refresh()
+
+    def close(self):
+        terminal.close()
+
+    #  Drawing and removing stuff
 
     def add_drawable(self, drawable,
                      pos=(0, 0), layer=0, refresh=True):
         """
         Add a drawable to the terminal.
-        Doesn't check for overlap and potentially overwrites any drawables
+        Doesn't check for overlap and potentially overwrites any drawable_locations
         present in the area.
         :param drawable: a Drawable instance
         :param pos: top left corner of the drawable
@@ -73,15 +88,21 @@ class BearTerminal:
         `terminal.refresh()` call
         :return:
         """
-        self.drawables[drawable] = DrawableLocation(pos=pos, layer=layer)
+        self.drawable_locations[drawable] = DrawableLocation(pos=pos, layer=layer)
         terminal.layer(layer)
         running_color = 'white'
+        if not self._drawable_pointers[layer]:
+            size = terminal.get('window.size')
+            width, height = (int(x) for x in size.split('x'))
+            self._drawable_pointers[layer] = [[None for y in range(height)]
+                                              for x in range(width)]
         for y in range(len(drawable.chars)):
             for x in range(len(drawable.chars[y])):
                 if drawable.colors[y][x] != running_color:
                     running_color = drawable.colors[y][x]
                     terminal.color(running_color)
                 terminal.put(pos[0]+x, pos[1]+y, drawable.chars[y][x])
+                self._drawable_pointers[layer][pos[0]+x][pos[1]+y] = drawable
         if running_color != self.default_color:
             terminal.color(self.default_color)
         if refresh:
@@ -90,20 +111,24 @@ class BearTerminal:
     def remove_drawable(self, drawable, refresh=True):
         """
         Remove drawable from the terminal
-        #TODO: check for other drawables that can become visible once this one
-        is destroyed
+        #TODO: check for other drawables that can become visible once
+        this one is destroyed
         :param drawable:
         :param refresh: whether to refresh the terminal after removing drawable.
         If this is False, the drawable will be visible until the next
         `terminal.refresh()` call
         :return:
         """
-        corner = self.drawables[drawable].pos
-        terminal.layer(self.drawables[drawable].layer)
+        corner = self.drawable_locations[drawable].pos
+        terminal.layer(self.drawable_locations[drawable].layer)
         terminal.clear_area(*corner, len(drawable.chars[0]), len(drawable.chars))
+        for y in range(len(drawable.chars)):
+            for x in range(len(drawable.chars[0])):
+                self._drawable_pointers[self.drawable_locations[drawable].layer]\
+                    [x][y] = None
         if refresh:
             self.refresh()
-        del(self.drawables[drawable])
+        del(self.drawable_locations[drawable])
         
     def move_drawable(self, drawable, pos):
         """
@@ -113,16 +138,29 @@ class BearTerminal:
         :param pos:
         :return:
         """
-        layer = self.drawables[drawable].layer
+        layer = self.drawable_locations[drawable].layer
         self.remove_drawable(drawable)
         self.add_drawable(drawable, pos=pos, layer=layer)
-    
-    def refresh(self):
-        terminal.refresh()
-        
-    def close(self):
-        terminal.close()
-    
+
+    #  Getting terminal info
+
+    def get_drawable_by_pos(self, pos, layer=None):
+        """
+        Returns the drawable currently placed at the given position.
+        If layer is set, checks only that layer. Otherwise returns the drawable
+        at the highest layer.
+        :param pos: 
+        :param layer: 
+        :return: 
+        """
+        if layer:
+            return self._drawable_pointers[layer][pos[0]][pos[1]]
+        else:
+            for layer_list in reversed(self._drawable_pointers):
+                if layer_list and layer_list[pos[0]][pos[1]]:
+                    return layer_list[pos[0]][pos[1]]
+            return None
+
 
 #  Widget classes
 class Drawable:
@@ -200,6 +238,7 @@ class Widget(Drawable):
 
 class BearException(Exception):
     pass
+
 
 class DrawableLocation:
     """
