@@ -5,31 +5,34 @@ Does not currently support asyncio, nor is threaded.
 
 from bear_hug import BearException
 import time
+from collections import deque
 
 class BearEvent:
     """
     Event data class. Supports two params: event_type and event_value
     event_type should be one of BearHugEvent.event_types
     """
-    event_types = {'tick', 'input'}
+    event_types = {'tick', # Emitted every tick
+                   'input', # Emitted on input
+                   'service'} #To do with queue}
     
     def __init__(self, event_type='tick', event_value=None):
         self.event_type = event_type
         self.event_value = event_value
         
 
-class BearLoop:
+class BearEventDispatcher:
     """
-    The event queue and loop class
+    The event queue and event_dispatcher class
     """
-    def __init__(self, fps=60):
+    def __init__(self):
         self.listeners = {x: [] for x in BearEvent.event_types}
         self.last_tick_time = None
-        self.fps = fps
+        self.deque = deque()
     
     def register_listener(self, listener, event_types='all'):
         """
-        Add a listener to this loop.
+        Add a listener to this event_dispatcher.
         :param object listener: a listener to add. This is any object with an `on_event`
         callback.
         :param iterable|str event_types: either a list of event_types or 'all'
@@ -50,7 +53,7 @@ class BearLoop:
     
     def unregister_listener(self, listener, event_types='all'):
         """
-        Remove a listener from the loop or some of its event streams.
+        Remove a listener from the event_dispatcher or some of its event streams.
         :param object listener: listener to remove
         :param iterable|str event_types: event types to unsubscribe from
         :return:
@@ -61,17 +64,29 @@ class BearLoop:
             if listener in self.listeners[event_type]:
                 self.listeners[event_type].remove(listener)
     
-    def add_event(self, event, pass_on='next_tick'):
-        pass
+    def add_event(self, event):
+        if not isinstance(event, BearEvent):
+            raise BearLoopException('Only BearEvents can be added to queue')
+        self.deque.append(event)
     
-    def start_loop(self):
-        pass
+    def start_queue(self):
+        """
+        Sends the queue initialization event to deque
+        :return:
+        """
+        self.deque.append(BearEvent(event_type='service',
+                                    event_value='Queue started'))
     
-    def stop_loop(self):
-        pass
-    
-    def on_tick(self):
-        pass
+    def dispatch_events(self):
+        """
+        Dispatch all the events to their listeners
+        :return:
+        """""
+        for _ in range(len(self.deque)):
+            e = self.deque.popleft()
+            for listener in self.listeners[e.event_type]:
+                listener.on_event(e)
+        
     
 class BearLoopException(BearException):
     pass
