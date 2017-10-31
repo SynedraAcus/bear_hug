@@ -39,10 +39,12 @@ class BearEventDispatcher:
         """
         if not hasattr(listener, 'on_event'):
             raise BearLoopException('Cannot add an object without on_event method as a listener')
-        if event_types == 'all':
-            event_types = self.listeners.keys()
         if isinstance(event_types, str):
-            raise BearLoopException('event_type shoud be \'all\' or a list')
+            if event_types == 'all':
+                event_types = self.listeners.keys()
+            else:
+                # Let's think about incorrect types a bit later
+                event_types = [event_types]
         for event_type in event_types:
             try:
                 self.listeners[event_type].append(listener)

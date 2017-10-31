@@ -33,6 +33,9 @@ def test_listener_sets(event_dispatcher, listener):
                 if x != 'input'])
     event_dispatcher.unregister_listener(listener, event_types='all')
     assert all([listener not in event_dispatcher.listeners[x] for x in event_dispatcher.listeners.keys()])
+    # Registering to a single event type
+    event_dispatcher.register_listener(listener, event_types='input')
+    assert listener in event_dispatcher.listeners['input']
     with pytest.raises(BearLoopException):
         event_dispatcher.register_listener(listener, event_types=['nonexistent_type'])
     
