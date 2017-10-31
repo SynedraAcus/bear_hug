@@ -13,7 +13,7 @@ class BearEvent:
     """
     event_types = {'tick', # Emitted every tick
                    'input', # Emitted on input
-                   'service'} #To do with queue}
+                   'service'} #To do with queue
     
     def __init__(self, event_type='tick', event_value=None):
         self.event_type = event_type
@@ -81,7 +81,7 @@ class BearEventDispatcher:
         Dispatch all the events to their listeners
         :return:
         """""
-        for _ in range(len(self.deque)):
+        while len(self.deque) > 0:
             e = self.deque.popleft()
             for listener in self.listeners[e.event_type]:
                 listener.on_event(e)

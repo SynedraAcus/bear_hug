@@ -81,11 +81,10 @@ class BearTerminal:
     #  Drawing and removing stuff
 
     def add_drawable(self, drawable,
-                     pos=(0, 0), layer=0, refresh=True):
+                     pos=(0, 0), layer=0, refresh=False):
         """
         Add a drawable to the terminal.
-        Doesn't check for overlap and potentially overwrites any drawable_locations
-        present in the area.
+        Sets drawable.terminal to self
         :param drawable: a Drawable instance
         :param pos: top left corner of the drawable
         :param layer: layer to place the drawable on
@@ -101,6 +100,7 @@ class BearTerminal:
                 if self._drawable_pointers[layer] and \
                         self._drawable_pointers[layer][pos[0]+x][pos[1]+y]:
                     raise BearException('Drawables cannot collide within a layer')
+        drawable.terminal = self
         self.drawable_locations[drawable] = DrawableLocation(pos=pos, layer=layer)
         terminal.layer(layer)
         running_color = 'white'
@@ -121,8 +121,8 @@ class BearTerminal:
             terminal.color(self.default_color)
         if refresh:
             self.refresh()
-        
-    def remove_drawable(self, drawable, refresh=True):
+    
+    def remove_drawable(self, drawable, refresh=False):
         """
         Remove drawable from the terminal
         #TODO: check for other drawables that can become visible once
@@ -139,12 +139,12 @@ class BearTerminal:
         for y in range(len(drawable.chars)):
             for x in range(len(drawable.chars[0])):
                 self._drawable_pointers[self.drawable_locations[drawable].layer]\
-                    [x][y] = None
+                    [corner[0] + x][corner[1] + y] = None
         if refresh:
             self.refresh()
         del(self.drawable_locations[drawable])
         
-    def move_drawable(self, drawable, pos):
+    def move_drawable(self, drawable, pos, refresh=False):
         """
         Move drawable to a new position.
         Does not change the layer.
@@ -155,7 +155,23 @@ class BearTerminal:
         layer = self.drawable_locations[drawable].layer
         self.remove_drawable(drawable)
         self.add_drawable(drawable, pos=pos, layer=layer)
+        if refresh:
+            self.refresh()
 
+    def update_drawable(self, drawable, refresh=False):
+        """
+        Reload the drawable on the screen.
+        Works by removing it and adding it again on its current position
+        :param drawable:
+        :return:
+        """
+        layer = self.drawable_locations[drawable].layer
+        pos = self.drawable_locations[drawable].pos
+        self.remove_drawable(drawable)
+        self.add_drawable(drawable, pos=pos, layer=layer)
+        if refresh:
+            self.refresh()
+    
     #  Getting terminal info
 
     def get_drawable_by_pos(self, pos, layer=None):
@@ -184,6 +200,7 @@ class BearLoop:
     Every 1/fps seconds, to be precise
     """
     def __init__(self, terminal, queue, fps=30):
+        # Assumes terminal to be running
         self.terminal = terminal
         self.queue = queue
         self.frame_time = 1/fps
@@ -196,14 +213,17 @@ class BearLoop:
         It would run indefinitely and can be stopped with `self.stop`
         :return:
         """
-        self.last_time = time.time()
+        # An imaginary "zeroth" tick to give the first tick correct timing
+        self.last_time = time.time() - self.frame_time
         while not self.stopped:
             # All actual processes happen here
-            self.run_iteration(time.time()-self.last_time)
+            # Sends time since last tick *started*
             t = time.time() - self.last_time
-            if t < self.frame_time:
+            self.last_time = time.time()
+            self.run_iteration(t)
+            if time.time() - self.last_time < self.frame_time:
                 # If frame was finished early, wait for it
-                time.sleep(self.frame_time - t)
+                time.sleep(self.frame_time - time.time() + self.last_time)
                
     def stop(self):
         """
@@ -240,6 +260,11 @@ class Drawable:
             raise BearException('Chars and colors should have the same shape')
         self.chars = chars
         self.colors = colors
+        # A drawable may want to know about the terminal it's attached to
+        self.terminal = None
+        
+    def on_event(self, event):
+        pass
         
 
 class Label(Drawable):
