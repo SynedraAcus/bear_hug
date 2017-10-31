@@ -1,11 +1,10 @@
 """
-A loop and event system.
-Does not currently support asyncio, nor is threaded.
+An event system.
 """
 
-from bear_hug import BearException
-import time
+from bear_utilities import BearLoopException, BearException
 from collections import deque
+
 
 class BearEvent:
     """
@@ -86,7 +85,3 @@ class BearEventDispatcher:
             e = self.deque.popleft()
             for listener in self.listeners[e.event_type]:
                 listener.on_event(e)
-        
-    
-class BearLoopException(BearException):
-    pass

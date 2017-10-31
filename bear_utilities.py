@@ -52,3 +52,10 @@ def rectangles_collide(pos1, size1, pos2, size2):
         if pos1[1] <= pos2[1]+size2[1]-1 and pos2[1] <= pos1[1]+size1[1]-1:
             return True
     return False
+
+#  Exceptions were moved here to avoid circular imports
+class BearException(Exception):
+    pass
+
+class BearLoopException(BearException):
+    pass

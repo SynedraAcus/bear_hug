@@ -4,7 +4,10 @@ art and widget-like behaviour.
 """
 
 from bearlibterminal import terminal
-from bear_utilities import shapes_equal, copy_shape
+from bear_utilities import shapes_equal, copy_shape, BearException
+from event import BearEvent
+
+import time
 from copy import copy
 
 
@@ -173,7 +176,52 @@ class BearTerminal:
             return None
 
 
+#  A loop
+
+class BearLoop:
+    """
+    A loop that passes event around every once in a while.
+    Every 1/fps seconds, to be precise
+    """
+    def __init__(self, terminal, queue, fps=30):
+        self.terminal = terminal
+        self.queue = queue
+        self.frame_time = 1/fps
+        self.stopped = False
+        self.last_time = 0
+        
+    def run(self):
+        """
+        Start a loop.
+        It would run indefinitely and can be stopped with `self.stop`
+        :return:
+        """
+        self.last_time = time.time()
+        while not self.stopped:
+            # All actual processes happen here
+            self.run_iteration(time.time()-self.last_time)
+            t = time.time() - self.last_time
+            if t < self.frame_time:
+                # If frame was finished early, wait for it
+                time.sleep(self.frame_time - t)
+               
+    def stop(self):
+        """
+        Stop the loop.
+        It would quit after finishing the current iteration
+        :return:
+        """
+        self.stopped = True
+    
+    def run_iteration(self, time_since_last_tick):
+        self.queue.add_event(BearEvent(event_type='tick',
+                                       event_value=time_since_last_tick))
+        self.queue.dispatch_events()
+        self.terminal.refresh()
+    
 #  Widget classes
+
+
 class Drawable:
     """
     The base class for things that can be placed on the terminal.
@@ -246,10 +294,6 @@ class Widget(Drawable):
 
 
 #  Service classes
-
-class BearException(Exception):
-    pass
-
 
 class DrawableLocation:
     """
