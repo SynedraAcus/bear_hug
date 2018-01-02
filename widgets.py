@@ -1,7 +1,9 @@
 #  Widget and Listener classes
 
+from bear_hug import BearTerminal
 from bear_utilities import shapes_equal, copy_shape, BearException
 from collections import deque
+from event import BearEvent
 
 class Widget:
     """
@@ -120,3 +122,37 @@ class Listener:
     
     def on_event(self, event):
         raise NotImplementedError('Listener base class is doing nothing')
+    
+    def register_terminal(self, terminal):
+        """
+        Register a terminal with which this listener will interact
+        :param terminal: A BearTerminal instance
+        :return:
+        """
+        if not isinstance(terminal, BearTerminal):
+            raise TypeError('Only BearTerminal instances registered by Listener')
+        self.terminal = terminal
+        
+    
+class ClosingListener(Listener):
+    """
+    The listener that waits for TK_CLOSE input event (Alt-F4 or closing window)
+    and sends the shutdown service event to the queue. All widgets are expected
+    to listen to it and immediately save their data or whatever they need to do.
+    On the next tick ClosingListener closes the terminal and queue altogether.
+    """
+    def __init__(self):
+        super().__init__()
+        self.countdown = 2
+        self.counting = False
+        
+    def on_event(self, event):
+        if event.event_type == 'misc_input' and event.event_value == 'TK_CLOSE':
+            self.counting = True
+            return BearEvent(event_type='service', event_value='shutdown_ready')
+        if event.event_type == 'tick':
+            if self.counting:
+                self.countdown -= 1
+                if self.countdown == 0:
+                    return BearEvent(event_type='service',
+                                     event_value='shutdown')

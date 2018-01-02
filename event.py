@@ -1,6 +1,8 @@
 """
 An event system.
-There is a finite number of acceptable event types defined by queue.
+Events are passed around on every tick to listeners' `on_event` method according
+to their `event_type` subscriptions. If on_event returns an event, it is added
+to the back of the queue and processed within the same tick
 """
 
 from bear_utilities import BearLoopException, BearException
@@ -19,7 +21,11 @@ class BearEvent:
 
 class BearEventDispatcher:
     """
-    The BearEvent queue and dispatcher class
+    The BearEvent queue and dispatcher class.
+    Iterates until someone emits the 'shutdown' event of type 'service'. Widgets
+    may expect the 'shutdown_ready' event of the same type to be emitted a tick
+    before that, so that they could finish processing the last tick and save
+    their data or whatever. But this is not enforced by the queue.
     """
     def __init__(self):
         self.last_tick_time = None
@@ -29,7 +35,7 @@ class BearEventDispatcher:
                             'key_down', # Key or mouse button down
                             'key_up', # Key or mouse button up
                             'misc_input', # Other input, eg MOUSE_MOVE or CLOSE
-                            'service'} #To do with queue or engine in general
+                            'service'} # To do with queue or engine in general
         self.listeners = {x: [] for x in self.event_types}
         self.deque = deque()
     
@@ -45,7 +51,7 @@ class BearEventDispatcher:
         """
         if not hasattr(listener, 'on_event'):
             raise BearLoopException('Cannot add an object without on_event' +
-                                    ' method as a listener')
+                                    ' method asevents a listener')
         if isinstance(event_types, str):
             if event_types == 'all':
                 event_types = self.listeners.keys()
@@ -113,4 +119,10 @@ class BearEventDispatcher:
         while len(self.deque) > 0:
             e = self.deque.popleft()
             for listener in self.listeners[e.event_type]:
-                listener.on_event(e)
+                r = listener.on_event(e)
+                if r:
+                    if isinstance(r, BearEvent):
+                        self.add_event(r)
+                    else:
+                        raise BearLoopException('on_event returns something ' +
+                                                'other than BearEvent')

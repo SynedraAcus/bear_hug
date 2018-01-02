@@ -363,6 +363,8 @@ class BearLoop:
         # Assumes terminal to be running
         self.terminal = terminal
         self.queue = queue
+        # The loop listens for service events so that it knows when to shutdown
+        self.queue.register_listener(self, 'service')
         self.frame_time = 1/fps
         self.stopped = False
         self.last_time = 0
@@ -384,6 +386,9 @@ class BearLoop:
             if time.time() - self.last_time < self.frame_time:
                 # If frame was finished early, wait for it
                 time.sleep(self.frame_time - time.time() + self.last_time)
+        # When the loop stops, it closes the terminal. Everyone is expected to
+        # have caught the shutdown service event
+        self.terminal.close()
                
     def stop(self):
         """
@@ -401,6 +406,10 @@ class BearLoop:
                                        event_value=time_since_last_tick))
         self.queue.dispatch_events()
         self.terminal.refresh()
+        
+    def on_event(self, event):
+        if event.event_value == 'shutdown':
+            self.stopped = True
         
     
 #  Misc classes
