@@ -63,14 +63,24 @@ class Firework(Drawable):
                         random.choice(('red', 'blue', 'white'))
                 self.terminal.update_drawable(self)
                 self.ticks_skipped = 0
+
+                
+class InputCatcher:
+    """
+    A simple class for printing input events to the console
+    """
+    def on_event(self, event):
+        print(event.event_type, event.event_value)
             
 
 t = BearTerminal(size='30x30', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
-loop = BearLoop(t, dispatcher, fps=52)
+loop = BearLoop(t, dispatcher)
 counter = FPSCounter()
-dispatcher.register_listener(counter, ['tick', 'input'])
+dispatcher.register_listener(counter, ['tick'])
 fireworks = [Firework(freq=1) for x in range(4)]
+catcher = InputCatcher()
+dispatcher.register_listener(catcher, ['key_up', 'key_down', 'misc_input'])
 t.start()
 t.add_drawable(counter, pos=(1, 1), layer=0)
 layer = 1
@@ -80,18 +90,3 @@ for f in fireworks:
                    layer=layer)
     layer += 1 # To avoid collisions
 loop.run()
-
-# exts = [x for x in range(10)]
-# colors = ['red', 'green', 'blue']
-# for x in texts:
-#     t.add_drawable(Label(str(x), color=random.choice(colors)), pos=(x, x))
-# l = Label('Quick fox\nJumped over\nThe lazy dog', just='center', color='yellow')
-# t.add_drawable(l, pos=(11, 11), layer=5)
-# l2 = Label('Lorem ipsum\ndolor sit amet')
-# t.add_drawable(l2, pos=(11, 11), layer=10)
-# assert t.get_drawable_by_pos((12, 11)) == l2
-# assert t.get_drawable_by_pos((12, 11), layer=5) == l
-# assert t.get_drawable_by_pos((14, 10)) is None
-# t.clear()
-# t.add_drawable(Label('Stuff cleared'), pos=(10, 10))
-# t.close()

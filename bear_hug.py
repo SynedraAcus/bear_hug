@@ -244,7 +244,17 @@ class BearTerminal:
         while terminal.has_input():
             # Process the input event
             in_event = terminal.read()
-            yield BearEvent('input', self.input_codes[in_event])
+            if in_event in self.input_codes:
+                yield BearEvent('key_down', self.input_codes[in_event])
+            else:
+                # BLT OR's button codes with TK_RELEASED, which is not really
+                # reversible. So we have to make guesses as to what button got
+                # released.
+                # NOTE TO SELF: using an additional dict like down_codes will
+                # speed the things up a bit. Maybe do that later.
+                for key in self.input_codes:
+                    if key|terminal.TK_KEY_RELEASED == in_event:
+                        yield BearEvent('key_up', self.input_codes[key])
 
 
 #  A loop

@@ -12,7 +12,9 @@ class BearEvent:
     event_type should be one of BearHugEvent.event_types
     """
     event_types = {'tick', # Emitted every tick
-                   'input', # Emitted on input
+                   'key_down', # Key or mouse button down
+                   'key_up', # Key or mouse button up
+                   'misc_input', # Other input, eg MOUSE_MOVE or CLOSE
                    'service'} #To do with queue
     
     def __init__(self, event_type='tick', event_value=None):
