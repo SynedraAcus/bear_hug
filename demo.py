@@ -12,14 +12,14 @@ from event import BearEventDispatcher
 
 class FPSCounter(Drawable):
     def __init__(self, *args, **kwargs):
-        # Initial values for averaging stream
         self.samples_deque = deque(maxlen=100)
+        # Something to be dispayed on th 1st frame
         chars = [list(str(30))]
         color = copy_shape(chars, 'white')
         super().__init__(chars, color, *args, **kwargs)
     
     def _update_self(self):
-        self.chars = list(str(round(len(self.samples_deque)/sum(self.samples_deque))))
+        self.chars = [list(str(round(len(self.samples_deque)/sum(self.samples_deque))))]
         self.colors = copy_shape(self.chars, 'white')
         
     def on_event(self, event):
@@ -67,7 +67,7 @@ class Firework(Drawable):
 
 t = BearTerminal(size='30x30', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
-loop = BearLoop(t, dispatcher)
+loop = BearLoop(t, dispatcher, fps=52)
 counter = FPSCounter()
 dispatcher.register_listener(counter, ['tick', 'input'])
 fireworks = [Firework(freq=1) for x in range(4)]
