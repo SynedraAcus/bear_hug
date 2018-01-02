@@ -37,38 +37,73 @@ class BearTerminal:
     # Bearlibterminal's input codes and terminal state codes are converted to
     # constants before emitting events, so that downstream widgets could process
     # them without asking the terminal to explain what the fuck 0x50 is.
-    input_codes = {0x04: 'TK_A', 0x05: 'TK_B', 0x06: 'TK_C', 0x07: 'TK_D',
-    0x08: 'TK_E', 0x09: 'TK_F', 0x0A: 'TK_G', 0x0B: 'TK_H', 0x0C: 'TK_I',
-    0x0D: 'TK_J', 0x0E: 'TK_K', 0x0F: 'TK_L', 0x10: 'TK_M', 0x11: 'TK_N',
-    0x12: 'TK_O', 0x13: 'TK_P', 0x14: 'TK_Q', 0x15: 'TK_R', 0x16: 'TK_S',
-    0x17: 'TK_T', 0x18: 'TK_U', 0x19: 'TK_V', 0x1A: 'TK_W', 0x1B: 'TK_X',
-    0x1C: 'TK_Y', 0x1D: 'TK_Z',
-                   0x1E: 'TK_1', 0x1F: 'TK_2', 0x20: 'TK_3',
-    0x21: 'TK_4', 0x22: 'TK_5', 0x23: 'TK_6', 0x24: 'TK_7', 0x25: 'TK_8',
-    0x26: 'TK_9', 0x27: 'TK_0',
-                   0x28: 'TK_ENTER', 0x29: 'TK_ESCAPE', 0x2A: 'TK_BACKSPACE',
-    0x2B: 'TK_TAB', 0x2C: 'TK_SPACE', 0x2D: 'TK_MINUS', 0x2E: 'TK_EQUALS',
-    0x2F: 'TK_LBRACKET', 0x30: 'TK_RBRACKET', 0x31: 'TK_BACKSLASH',
-    0x33: 'TK_SEMICOLON', 0x34: 'TK_APOSTROPHE', 0x35: 'TK_GRAVE',
-    0x36: 'TK_COMMA', 0x37: 'TK_PERIOD', 0x38: 'TK_SLASH',
-                   0x3A: 'TK_F1', 0x3B: 'TK_F2', 0x3C: 'TK_F3', 0x3D: 'TK_F4',
-    0x3E: 'TK_F5', 0x3F: 'TK_F6', 0x40: 'TK_F7', 0x41: 'TK_F8', 0x42: 'TK_F9',
-    0x43: 'TK_F10', 0x44: 'TK_F11', 0x45: 'TK_F12',
-                   0x48: 'TK_PAUSE', 0x49: 'TK_INSERT', 0x4A: 'TK_HOME',
-    0x4B: 'TK_PAGEUP', 0x4C: 'TK_DELETE', 0x4D: 'TK_END', 0x4E: 'TK_PAGEDOWN',
-    0x4F: 'TK_RIGHT', 0x50: 'TK_LEFT', 0x51: 'TK_DOWN', 0x52: 'TK_UP',
-                    0x54: 'TK_KP_DIVIDE', 0x55: 'TK_KP_MULTIPLY',
-    0x56: 'TK_KP_MINUS', 0x57: 'TK_KP_PLUS', 0x58: 'TK_KP_ENTER',
-    0x59: 'TK_KP_1', 0x5A: 'TK_KP_2', 0x5B: 'TK_KP_3',0x5C: 'TK_KP_4',
-    0x5D: 'TK_KP_5', 0x5E: 'TK_KP_6', 0x5F: 'TK_KP_7', 0x60: 'TK_KP_8',
-    0x61: 'TK_KP_9', 0x62: 'TK_KP_0', 0x63: 'TK_KP_PERIOD',
-    0x70: 'TK_SHIFT', 0x71: 'TK_CONTROL', 0x72: 'TK_ALT',
-                   0x80: 'TK_MOUSE_LEFT', 0x81: 'TK_MOUSE_RIGHT',
-    0x82: 'TK_MOUSE_MIDDLE', 0x83: 'TK_MOUSE_X1', 0x84: 'TK_MOUSE_X2',
+    
+    # These are codes for keys and mouse buttons going down
+    down_codes = {0x04: 'TK_A', 0x05: 'TK_B', 0x06: 'TK_C', 0x07: 'TK_D',
+                  0x08: 'TK_E', 0x09: 'TK_F', 0x0A: 'TK_G', 0x0B: 'TK_H', 0x0C: 'TK_I',
+                  0x0D: 'TK_J', 0x0E: 'TK_K', 0x0F: 'TK_L', 0x10: 'TK_M', 0x11: 'TK_N',
+                  0x12: 'TK_O', 0x13: 'TK_P', 0x14: 'TK_Q', 0x15: 'TK_R', 0x16: 'TK_S',
+                  0x17: 'TK_T', 0x18: 'TK_U', 0x19: 'TK_V', 0x1A: 'TK_W', 0x1B: 'TK_X',
+                  0x1C: 'TK_Y', 0x1D: 'TK_Z',
+                  0x1E: 'TK_1', 0x1F: 'TK_2', 0x20: 'TK_3',
+                  0x21: 'TK_4', 0x22: 'TK_5', 0x23: 'TK_6', 0x24: 'TK_7', 0x25: 'TK_8',
+                  0x26: 'TK_9', 0x27: 'TK_0',
+                  0x28: 'TK_ENTER', 0x29: 'TK_ESCAPE', 0x2A: 'TK_BACKSPACE',
+                  0x2B: 'TK_TAB', 0x2C: 'TK_SPACE', 0x2D: 'TK_MINUS', 0x2E: 'TK_EQUALS',
+                  0x2F: 'TK_LBRACKET', 0x30: 'TK_RBRACKET', 0x31: 'TK_BACKSLASH',
+                  0x33: 'TK_SEMICOLON', 0x34: 'TK_APOSTROPHE', 0x35: 'TK_GRAVE',
+                  0x36: 'TK_COMMA', 0x37: 'TK_PERIOD', 0x38: 'TK_SLASH',
+                  0x3A: 'TK_F1', 0x3B: 'TK_F2', 0x3C: 'TK_F3', 0x3D: 'TK_F4',
+                  0x3E: 'TK_F5', 0x3F: 'TK_F6', 0x40: 'TK_F7', 0x41: 'TK_F8', 0x42: 'TK_F9',
+                  0x43: 'TK_F10', 0x44: 'TK_F11', 0x45: 'TK_F12',
+                  0x48: 'TK_PAUSE', 0x49: 'TK_INSERT', 0x4A: 'TK_HOME',
+                  0x4B: 'TK_PAGEUP', 0x4C: 'TK_DELETE', 0x4D: 'TK_END', 0x4E: 'TK_PAGEDOWN',
+                  0x4F: 'TK_RIGHT', 0x50: 'TK_LEFT', 0x51: 'TK_DOWN', 0x52: 'TK_UP',
+                  0x54: 'TK_KP_DIVIDE', 0x55: 'TK_KP_MULTIPLY',
+                  0x56: 'TK_KP_MINUS', 0x57: 'TK_KP_PLUS', 0x58: 'TK_KP_ENTER',
+                  0x59: 'TK_KP_1', 0x5A: 'TK_KP_2', 0x5B: 'TK_KP_3', 0x5C: 'TK_KP_4',
+                  0x5D: 'TK_KP_5', 0x5E: 'TK_KP_6', 0x5F: 'TK_KP_7', 0x60: 'TK_KP_8',
+                  0x61: 'TK_KP_9', 0x62: 'TK_KP_0', 0x63: 'TK_KP_PERIOD',
+                  0x70: 'TK_SHIFT', 0x71: 'TK_CONTROL', 0x72: 'TK_ALT',
+                  0x80: 'TK_MOUSE_LEFT', 0x81: 'TK_MOUSE_RIGHT',
+                  0x82: 'TK_MOUSE_MIDDLE'}
+    
+    # The same buttons going up.
+    # BLT OR's key code with TK_KEY_RELEASED, which is not reversible except by
+    # bruteforcing all the keys. Thus, a second dict.
+    up_codes = {260: 'TK_A', 261: 'TK_B', 262: 'TK_C', 263: 'TK_D', 264: 'TK_E',
+                265: 'TK_F', 266: 'TK_G', 267: 'TK_H', 268: 'TK_I', 269: 'TK_J',
+                270: 'TK_K', 271: 'TK_L', 272: 'TK_M', 273: 'TK_N', 274: 'TK_O',
+                275: 'TK_P', 276: 'TK_Q', 277: 'TK_R', 278: 'TK_S', 279: 'TK_T',
+                280: 'TK_U', 281: 'TK_V', 282: 'TK_W', 283: 'TK_X', 284: 'TK_Y',
+                285: 'TK_Z', 286: 'TK_1', 287: 'TK_2', 288: 'TK_3', 289: 'TK_4',
+                290: 'TK_5', 291: 'TK_6', 292: 'TK_7', 293: 'TK_8', 294: 'TK_9',
+                295: 'TK_0', 296: 'TK_ENTER', 297: 'TK_ESCAPE',
+                298: 'TK_BACKSPACE', 299: 'TK_TAB', 300: 'TK_SPACE',
+                301: 'TK_MINUS', 302: 'TK_EQUALS', 303: 'TK_LBRACKET',
+                304: 'TK_RBRACKET', 305: 'TK_BACKSLASH', 307: 'TK_SEMICOLON',
+                308: 'TK_APOSTROPHE', 309: 'TK_GRAVE', 310: 'TK_COMMA',
+                311: 'TK_PERIOD', 312: 'TK_SLASH', 314: 'TK_F1', 315: 'TK_F2',
+                316: 'TK_F3', 317: 'TK_F4', 318: 'TK_F5', 319: 'TK_F6',
+                320: 'TK_F7', 321: 'TK_F8', 322: 'TK_F9', 323: 'TK_F10',
+                324: 'TK_F11', 325: 'TK_F12', 328: 'TK_PAUSE', 329: 'TK_INSERT',
+                30: 'TK_HOME', 331: 'TK_PAGEUP', 332: 'TK_DELETE',
+                333: 'TK_END', 334: 'TK_PAGEDOWN', 335: 'TK_RIGHT',
+                336: 'TK_LEFT', 337: 'TK_DOWN', 338: 'TK_UP',
+                340: 'TK_KP_DIVIDE', 341: 'TK_KP_MULTIPLY', 342: 'TK_KP_MINUS',
+                343: 'TK_KP_PLUS', 344: 'TK_KP_ENTER', 345: 'TK_KP_1',
+                346: 'TK_KP_2', 347: 'TK_KP_3', 348: 'TK_KP_4', 349: 'TK_KP_5',
+                350: 'TK_KP_6', 351: 'TK_KP_7', 352: 'TK_KP_8', 353: 'TK_KP_9',
+                354: 'TK_KP_0', 355: 'TK_KP_PERIOD', 368: 'TK_SHIFT',
+                369: 'TK_CONTROL', 370: 'TK_ALT', 384: 'TK_MOUSE_LEFT',
+                385: 'TK_MOUSE_RIGHT', 386: 'TK_MOUSE_MIDDLE'}
+    
+    # This is misc input and state codes
+    misc_input = {0x83: 'TK_MOUSE_X1', 0x84: 'TK_MOUSE_X2',
     0x85: 'TK_MOUSE_MOVE', 0x86: 'TK_MOUSE_SCROLL',
                    0x87: 'TK_MOUSE_X', 0x88: 'TK_MOUSE_Y',
     0x89: 'TK_MOUSE_PIXEL_X', 0x8A: 'TK_MOUSE_PIXEL_Y', 0x8B: 'TK_MOUSE_WHEEL',
-    0x8C: 'TK_MOUSE_CLICKS', 0x100: 'TK_KEY_RELEASED',
+    0x8C: 'TK_MOUSE_CLICKS',
                    0xC0: 'TK_WIDTH', 0xC1: 'TK_HEIGHT', 0xC2: 'TK_CELL_WIDTH',
     0xC3: 'TK_CELL_HEIGHT', 0xC4: 'TK_COLOR', 0xC5: 'TK_BKCOLOR',
     0xC6: 'TK_LAYER', 0xC7: 'TK_COMPOSITION', 0xC8: 'TK_CHAR',
@@ -237,24 +272,23 @@ class BearTerminal:
     # Input
     def check_input(self):
         """
-        Check if terminal has input. If it does, yield input event(s)
+        Check if terminal has input. If so, yield corresponding `BearEvent`(s)
+        This method returns an iterator because it's possible there would be
+        more than one event in a single tick
         :param self:
         :return:
         """
         while terminal.has_input():
             # Process the input event
             in_event = terminal.read()
-            if in_event in self.input_codes:
-                yield BearEvent('key_down', self.input_codes[in_event])
+            if in_event in self.misc_input:
+                yield BearEvent('misc_input', self.misc_input[in_event])
+            elif in_event in self.down_codes:
+                yield BearEvent('key_down', self.down_codes[in_event])
+            elif in_event in self.up_codes:
+                yield BearEvent('key_up', self.up_codes[in_event])
             else:
-                # BLT OR's button codes with TK_RELEASED, which is not really
-                # reversible. So we have to make guesses as to what button got
-                # released.
-                # NOTE TO SELF: using an additional dict like down_codes will
-                # speed the things up a bit. Maybe do that later.
-                for key in self.input_codes:
-                    if key|terminal.TK_KEY_RELEASED == in_event:
-                        yield BearEvent('key_up', self.input_codes[key])
+                raise BearException('Unknown input code {}'.format(in_event))
 
 
 #  A loop
