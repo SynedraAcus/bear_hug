@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python3.6
 
 # Manual test for bearhug. Shows some basic stuff using bear_hug library
 
@@ -28,6 +28,8 @@ class FPSCounter(Drawable):
             self.samples_deque.append(event.event_value)
             self._update_self()
             self.terminal.update_drawable(self)
+        elif event.event_type == 'input':
+            print(event.event_value)
 
         
 class Firework(Drawable):
@@ -63,11 +65,11 @@ class Firework(Drawable):
                 self.ticks_skipped = 0
             
 
-t = BearTerminal(size='30x30', title='Test window')
+t = BearTerminal(size='30x30', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
 counter = FPSCounter()
-dispatcher.register_listener(counter, ['tick'])
+dispatcher.register_listener(counter, ['tick', 'input'])
 fireworks = [Firework(freq=1) for x in range(4)]
 t.start()
 t.add_drawable(counter, pos=(1, 1), layer=0)
