@@ -5,12 +5,12 @@
 import random
 from collections import deque
 
-from bear_hug import BearTerminal, Drawable, Label, BearLoop
+from bear_hug import BearTerminal, Widget, Label, BearLoop
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
 
 
-class FPSCounter(Drawable):
+class FPSCounter(Widget):
     def __init__(self, *args, **kwargs):
         self.samples_deque = deque(maxlen=100)
         # Something to be dispayed on th 1st frame
@@ -32,10 +32,10 @@ class FPSCounter(Drawable):
             print(event.event_value)
 
         
-class Firework(Drawable):
+class Firework(Widget):
     """
-    Draws a size*size square with two asterisks in it
-    Moves asterisks and changes colours every freq seconds
+    Draws a `size`*`size` square with some asterisks in it
+    Moves asterisks and changes colours every `freq` ticks
     """
     def __init__(self, size=3, freq=10, **kwargs):
         self.asterisks=[(random.randint(0, size-1), random.randint(0, size-1))\
@@ -64,14 +64,6 @@ class Firework(Drawable):
                 self.terminal.update_drawable(self)
                 self.ticks_skipped = 0
 
-                
-class InputCatcher:
-    """
-    A simple class for printing input events to the console
-    """
-    def on_event(self, event):
-        print(event.event_type, event.event_value)
-            
 
 t = BearTerminal(size='30x30', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
@@ -79,8 +71,6 @@ loop = BearLoop(t, dispatcher)
 counter = FPSCounter()
 dispatcher.register_listener(counter, ['tick'])
 fireworks = [Firework(freq=1) for x in range(4)]
-catcher = InputCatcher()
-dispatcher.register_listener(catcher, ['key_up', 'key_down', 'misc_input'])
 t.start()
 t.add_drawable(counter, pos=(1, 1), layer=0)
 layer = 1
