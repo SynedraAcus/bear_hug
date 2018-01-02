@@ -113,7 +113,8 @@ class BearEventDispatcher:
     
     def dispatch_events(self):
         """
-        Dispatch all the events to their listeners
+        Dispatch all the events to their listeners, adding whatever they have to
+        say about it to the queue.
         :return:
         """""
         while len(self.deque) > 0:
