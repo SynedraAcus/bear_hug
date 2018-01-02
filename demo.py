@@ -3,35 +3,13 @@
 # Manual test for bearhug. Shows some basic stuff using bear_hug library
 
 import random
-from collections import deque
 
-from bear_hug import BearTerminal, Widget, Label, BearLoop
+from bear_hug import BearTerminal, BearLoop
+from widgets import Widget, FPSCounter
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
 
 
-class FPSCounter(Widget):
-    def __init__(self, *args, **kwargs):
-        self.samples_deque = deque(maxlen=100)
-        # Something to be dispayed on th 1st frame
-        chars = [list(str(30))]
-        color = copy_shape(chars, 'white')
-        super().__init__(chars, color, *args, **kwargs)
-    
-    def _update_self(self):
-        self.chars = [list(str(round(len(self.samples_deque)/sum(self.samples_deque))))]
-        self.colors = copy_shape(self.chars, 'white')
-        
-    def on_event(self, event):
-        # Update FPS estimate
-        if event.event_type == 'tick':
-            self.samples_deque.append(event.event_value)
-            self._update_self()
-            self.terminal.update_widget(self)
-        elif event.event_type == 'input':
-            print(event.event_value)
-
-        
 class Firework(Widget):
     """
     Draws a `size`*`size` square with some asterisks in it
