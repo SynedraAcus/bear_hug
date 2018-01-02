@@ -1,22 +1,17 @@
 """
 An event system.
+There is a finite number of acceptable event types defined by queue.
 """
 
 from bear_utilities import BearLoopException, BearException
 from collections import deque
+from copy import copy
 
 
 class BearEvent:
     """
-    Event data class. Supports two params: event_type and event_value
-    event_type should be one of BearHugEvent.event_types
+    Event data class. Has two params: event_type and event_value
     """
-    event_types = {'tick', # Emitted every tick
-                   'key_down', # Key or mouse button down
-                   'key_up', # Key or mouse button up
-                   'misc_input', # Other input, eg MOUSE_MOVE or CLOSE
-                   'service'} #To do with queue
-    
     def __init__(self, event_type='tick', event_value=None):
         self.event_type = event_type
         self.event_value = event_value
@@ -27,8 +22,15 @@ class BearEventDispatcher:
     The BearEvent queue and dispatcher class
     """
     def __init__(self):
-        self.listeners = {x: [] for x in BearEvent.event_types}
         self.last_tick_time = None
+        # All these event types need to be supported by the queue in order for
+        # the engine to function.
+        self.event_types = {'tick', # Emitted every tick
+                            'key_down', # Key or mouse button down
+                            'key_up', # Key or mouse button up
+                            'misc_input', # Other input, eg MOUSE_MOVE or CLOSE
+                            'service'} #To do with queue or engine in general
+        self.listeners = {x: [] for x in self.event_types}
         self.deque = deque()
     
     def register_listener(self, listener, event_types='all'):
@@ -70,6 +72,17 @@ class BearEventDispatcher:
         for event_type in event_types:
             if listener in self.listeners[event_type]:
                 self.listeners[event_type].remove(listener)
+                
+    def register_event_type(self, event_type):
+        """
+        Add a new event type to be processed by queue.
+        :param event_type:
+        :return:
+        """
+        if not isinstance(event_type, str):
+            raise ValueError('Event type must be a string')
+        self.event_types.add(event_type)
+        self.listeners[event_type] = []
     
     def add_event(self, event):
         """
@@ -79,6 +92,9 @@ class BearEventDispatcher:
         """
         if not isinstance(event, BearEvent):
             raise BearLoopException('Only BearEvents can be added to queue')
+        if event.event_type not in self.event_types:
+            raise BearLoopException('Incorrect event type \"{}\"'.format(
+                event.event_type))
         self.deque.append(event)
     
     def start_queue(self):
