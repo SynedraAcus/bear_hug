@@ -24,7 +24,7 @@ class BearEvent:
 
 class BearEventDispatcher:
     """
-    The event queue and event_dispatcher class
+    The BearEvent queue and dispatcher class
     """
     def __init__(self):
         self.listeners = {x: [] for x in BearEvent.event_types}
@@ -34,13 +34,16 @@ class BearEventDispatcher:
     def register_listener(self, listener, event_types='all'):
         """
         Add a listener to this event_dispatcher.
-        :param object listener: a listener to add. This is any object with an `on_event`
-        callback.
-        :param iterable|str event_types: either a list of event_types or 'all'
+        :param object listener: a listener to add. Any object with an `on_event`
+        callback can be added. The callback should accept a BearEvent instance
+        as a single parameter.
+        :param iterable|str event_types: either a list of event_types or 'all'.
+        Defaults to 'all'
         :return:
         """
         if not hasattr(listener, 'on_event'):
-            raise BearLoopException('Cannot add an object without on_event method as a listener')
+            raise BearLoopException('Cannot add an object without on_event' +
+                                    ' method as a listener')
         if isinstance(event_types, str):
             if event_types == 'all':
                 event_types = self.listeners.keys()
@@ -56,9 +59,10 @@ class BearEventDispatcher:
     
     def unregister_listener(self, listener, event_types='all'):
         """
-        Remove a listener from the event_dispatcher or some of its event streams.
+        Remove a listener from the event_dispatcher or some of its event types.
         :param object listener: listener to remove
-        :param iterable|str event_types: event types to unsubscribe from
+        :param iterable|str event_types: event types to unsubscribe from or
+        'all'. Defaults to 'all'
         :return:
         """
         if event_types == 'all':
@@ -68,6 +72,11 @@ class BearEventDispatcher:
                 self.listeners[event_type].remove(listener)
     
     def add_event(self, event):
+        """
+        Add a BearEvent to the queue.
+        :param event:
+        :return:
+        """
         if not isinstance(event, BearEvent):
             raise BearLoopException('Only BearEvents can be added to queue')
         self.deque.append(event)

@@ -27,7 +27,7 @@ class FPSCounter(Widget):
         if event.event_type == 'tick':
             self.samples_deque.append(event.event_value)
             self._update_self()
-            self.terminal.update_drawable(self)
+            self.terminal.update_widget(self)
         elif event.event_type == 'input':
             print(event.event_value)
 
@@ -61,7 +61,7 @@ class Firework(Widget):
                 self.chars[self.asterisks[index][0]][self.asterisks[index][1]] = '*'
                 self.colors[self.asterisks[index][0]][self.asterisks[index][1]] = \
                         random.choice(('red', 'blue', 'white'))
-                self.terminal.update_drawable(self)
+                self.terminal.update_widget(self)
                 self.ticks_skipped = 0
 
 
@@ -72,11 +72,11 @@ counter = FPSCounter()
 dispatcher.register_listener(counter, ['tick'])
 fireworks = [Firework(freq=1) for x in range(4)]
 t.start()
-t.add_drawable(counter, pos=(1, 1), layer=0)
+t.add_widget(counter, pos=(1, 1), layer=0)
 layer = 1
 for f in fireworks:
     dispatcher.register_listener(f, ['tick'])
-    t.add_drawable(f, pos=(random.randint(0, 26), random.randint(0, 26)),
-                   layer=layer)
+    t.add_widget(f, pos=(random.randint(0, 26), random.randint(0, 26)),
+                 layer=layer)
     layer += 1 # To avoid collisions
 loop.run()

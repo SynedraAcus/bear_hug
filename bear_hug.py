@@ -15,7 +15,9 @@ from copy import copy
 class BearTerminal:
     """
     A main terminal class.
-    Accepts bearlibterminal library configuration options as kwargs.
+    Accepts bearlibterminal library configuration options as kwargs to __init__.
+    Currently only a library settings aresupported and there is no support for
+    changing them on the fly, but that's subject to fixing.
     """
     # kwargs to init are passed to bearlibterminal.terminal.set()
     # Currently only library settings are supported
@@ -26,7 +28,6 @@ class BearTerminal:
                        'filter': 'input', 'precise-mouse': 'input',
                        'mouse-cursor': 'input', 'cursor-symbol': 'input',
                        'cursor-blink-rate': 'input', 'alt-functions': 'input',
-                       'filter': 'input',
     
                        'postformatting': 'output', 'vsync': 'output',
                        'tab-width': 'output',
@@ -40,33 +41,33 @@ class BearTerminal:
     
     # These are codes for keys and mouse buttons going down
     down_codes = {0x04: 'TK_A', 0x05: 'TK_B', 0x06: 'TK_C', 0x07: 'TK_D',
-                  0x08: 'TK_E', 0x09: 'TK_F', 0x0A: 'TK_G', 0x0B: 'TK_H', 0x0C: 'TK_I',
-                  0x0D: 'TK_J', 0x0E: 'TK_K', 0x0F: 'TK_L', 0x10: 'TK_M', 0x11: 'TK_N',
-                  0x12: 'TK_O', 0x13: 'TK_P', 0x14: 'TK_Q', 0x15: 'TK_R', 0x16: 'TK_S',
-                  0x17: 'TK_T', 0x18: 'TK_U', 0x19: 'TK_V', 0x1A: 'TK_W', 0x1B: 'TK_X',
-                  0x1C: 'TK_Y', 0x1D: 'TK_Z',
-                  0x1E: 'TK_1', 0x1F: 'TK_2', 0x20: 'TK_3',
-                  0x21: 'TK_4', 0x22: 'TK_5', 0x23: 'TK_6', 0x24: 'TK_7', 0x25: 'TK_8',
-                  0x26: 'TK_9', 0x27: 'TK_0',
-                  0x28: 'TK_ENTER', 0x29: 'TK_ESCAPE', 0x2A: 'TK_BACKSPACE',
-                  0x2B: 'TK_TAB', 0x2C: 'TK_SPACE', 0x2D: 'TK_MINUS', 0x2E: 'TK_EQUALS',
-                  0x2F: 'TK_LBRACKET', 0x30: 'TK_RBRACKET', 0x31: 'TK_BACKSLASH',
-                  0x33: 'TK_SEMICOLON', 0x34: 'TK_APOSTROPHE', 0x35: 'TK_GRAVE',
-                  0x36: 'TK_COMMA', 0x37: 'TK_PERIOD', 0x38: 'TK_SLASH',
-                  0x3A: 'TK_F1', 0x3B: 'TK_F2', 0x3C: 'TK_F3', 0x3D: 'TK_F4',
-                  0x3E: 'TK_F5', 0x3F: 'TK_F6', 0x40: 'TK_F7', 0x41: 'TK_F8', 0x42: 'TK_F9',
-                  0x43: 'TK_F10', 0x44: 'TK_F11', 0x45: 'TK_F12',
-                  0x48: 'TK_PAUSE', 0x49: 'TK_INSERT', 0x4A: 'TK_HOME',
-                  0x4B: 'TK_PAGEUP', 0x4C: 'TK_DELETE', 0x4D: 'TK_END', 0x4E: 'TK_PAGEDOWN',
-                  0x4F: 'TK_RIGHT', 0x50: 'TK_LEFT', 0x51: 'TK_DOWN', 0x52: 'TK_UP',
-                  0x54: 'TK_KP_DIVIDE', 0x55: 'TK_KP_MULTIPLY',
-                  0x56: 'TK_KP_MINUS', 0x57: 'TK_KP_PLUS', 0x58: 'TK_KP_ENTER',
-                  0x59: 'TK_KP_1', 0x5A: 'TK_KP_2', 0x5B: 'TK_KP_3', 0x5C: 'TK_KP_4',
-                  0x5D: 'TK_KP_5', 0x5E: 'TK_KP_6', 0x5F: 'TK_KP_7', 0x60: 'TK_KP_8',
-                  0x61: 'TK_KP_9', 0x62: 'TK_KP_0', 0x63: 'TK_KP_PERIOD',
-                  0x70: 'TK_SHIFT', 0x71: 'TK_CONTROL', 0x72: 'TK_ALT',
-                  0x80: 'TK_MOUSE_LEFT', 0x81: 'TK_MOUSE_RIGHT',
-                  0x82: 'TK_MOUSE_MIDDLE'}
+          0x08: 'TK_E', 0x09: 'TK_F', 0x0A: 'TK_G', 0x0B: 'TK_H', 0x0C: 'TK_I',
+          0x0D: 'TK_J', 0x0E: 'TK_K', 0x0F: 'TK_L', 0x10: 'TK_M', 0x11: 'TK_N',
+          0x12: 'TK_O', 0x13: 'TK_P', 0x14: 'TK_Q', 0x15: 'TK_R', 0x16: 'TK_S',
+          0x17: 'TK_T', 0x18: 'TK_U', 0x19: 'TK_V', 0x1A: 'TK_W', 0x1B: 'TK_X',
+          0x1C: 'TK_Y', 0x1D: 'TK_Z',
+          0x1E: 'TK_1', 0x1F: 'TK_2', 0x20: 'TK_3',
+          0x21: 'TK_4', 0x22: 'TK_5', 0x23: 'TK_6', 0x24: 'TK_7', 0x25: 'TK_8',
+          0x26: 'TK_9', 0x27: 'TK_0',
+          0x28: 'TK_ENTER', 0x29: 'TK_ESCAPE', 0x2A: 'TK_BACKSPACE',
+          0x2B: 'TK_TAB', 0x2C: 'TK_SPACE', 0x2D: 'TK_MINUS', 0x2E: 'TK_EQUALS',
+          0x2F: 'TK_LBRACKET', 0x30: 'TK_RBRACKET', 0x31: 'TK_BACKSLASH',
+          0x33: 'TK_SEMICOLON', 0x34: 'TK_APOSTROPHE', 0x35: 'TK_GRAVE',
+          0x36: 'TK_COMMA', 0x37: 'TK_PERIOD', 0x38: 'TK_SLASH',
+          0x3A: 'TK_F1', 0x3B: 'TK_F2', 0x3C: 'TK_F3', 0x3D: 'TK_F4',
+          0x3E: 'TK_F5', 0x3F: 'TK_F6', 0x40: 'TK_F7', 0x41: 'TK_F8', 0x42: 'TK_F9',
+          0x43: 'TK_F10', 0x44: 'TK_F11', 0x45: 'TK_F12',
+          0x48: 'TK_PAUSE', 0x49: 'TK_INSERT', 0x4A: 'TK_HOME',
+          0x4B: 'TK_PAGEUP', 0x4C: 'TK_DELETE', 0x4D: 'TK_END', 0x4E: 'TK_PAGEDOWN',
+          0x4F: 'TK_RIGHT', 0x50: 'TK_LEFT', 0x51: 'TK_DOWN', 0x52: 'TK_UP',
+          0x54: 'TK_KP_DIVIDE', 0x55: 'TK_KP_MULTIPLY',
+          0x56: 'TK_KP_MINUS', 0x57: 'TK_KP_PLUS', 0x58: 'TK_KP_ENTER',
+          0x59: 'TK_KP_1', 0x5A: 'TK_KP_2', 0x5B: 'TK_KP_3', 0x5C: 'TK_KP_4',
+          0x5D: 'TK_KP_5', 0x5E: 'TK_KP_6', 0x5F: 'TK_KP_7', 0x60: 'TK_KP_8',
+          0x61: 'TK_KP_9', 0x62: 'TK_KP_0', 0x63: 'TK_KP_PERIOD',
+          0x70: 'TK_SHIFT', 0x71: 'TK_CONTROL', 0x72: 'TK_ALT',
+          0x80: 'TK_MOUSE_LEFT', 0x81: 'TK_MOUSE_RIGHT',
+          0x82: 'TK_MOUSE_MIDDLE'}
     
     # The same buttons going up.
     # BLT OR's key code with TK_KEY_RELEASED, which is not reversible except by
@@ -151,19 +152,19 @@ class BearTerminal:
     def __init__(self, *args, **kwargs):
         if kwargs:
             if any(x not in self.accepted_kwargs for x in kwargs.keys()):
-                raise BearException('Only bearlibterminal library settings accepted'
-                                    +' as kwargs for BearTerminal')
+                raise BearException('Only bearlibterminal library settings '
+                                    +' accepted as kwargs for BearTerminal')
             self.outstring = ';'.join('{}.{}={}'.format(self.accepted_kwargs[x],
                                                         x, str(kwargs[x]))
                                  for x in kwargs)+';'
         else:
             self.outstring = None
-        self.drawable_locations = {}
+        self.widget_locations = {}
         #  This will be one list of drawable pointers per layer. Lists are
         #  not actually allocated until at least one Widget is added to layer
         #  Lists are created when adding the first Widget and are never
         #  destroyed or resized.
-        self._drawable_pointers = [None for x in range(256)]
+        self._widget_pointers = [None for x in range(256)]
         self.default_color = 'white'
 
     #  Methods that replicate or wrap around blt's functions
@@ -171,6 +172,7 @@ class BearTerminal:
     def start(self):
         """
         Open a terminal and place it on the screen.
+        Applies library settings that were set in `__init__()`
         :return:
         """
         terminal.open()
@@ -180,129 +182,139 @@ class BearTerminal:
         
     def clear(self):
         """
-        Remove all drawable_locations from this terminal
+        Remove all widgets from this terminal, but do not close it
         :return:
         """
-        drawables = copy(self.drawable_locations)
+        drawables = copy(self.widget_locations)
         for drawable in drawables:
-            self.remove_drawable(drawable, refresh=False)
+            self.remove_widget(drawable, refresh=False)
         self.refresh()
 
     def refresh(self):
+        """
+        Refresh a terminal.
+        Places whatever changes were made by `*_widget` methods on the screen.
+        :return:
+        """
         terminal.refresh()
 
     def close(self):
+        """
+        Close a terminal.
+        Does not destroy Widget objects or call any other cleanup routine.
+        :return:
+        """
         terminal.close()
 
     #  Drawing and removing stuff
 
-    def add_drawable(self, drawable,
-                     pos=(0, 0), layer=0, refresh=False):
+    def add_widget(self, widget,
+                   pos=(0, 0), layer=0, refresh=False):
         """
-        Add a drawable to the terminal.
-        Sets drawable.terminal to self
-        :param drawable: a Widget instance
-        :param pos: top left corner of the drawable
-        :param layer: layer to place the drawable on
-        :param refresh: whether to refresh terminal after adding the drawable.
-        If this is False, the drawable will be invisible until the next
+        Add a widget to the terminal and set `widget.terminal` to `self`.
+        No two widgets are allowed to overlap within a layer and no widget can
+        be added twice.
+        :param widget: a Widget instance
+        :param pos: top left corner of the widget
+        :param layer: layer to place the widget on
+        :param refresh: whether to refresh terminal after adding the widget.
+        If this is False, the widget will not be actually shown until the next
         `terminal.refresh()` call
         :return:
         """
-        if drawable in self.drawable_locations.keys():
-            raise BearException('Cannot add the same drawable twice')
-        for y in range(len(drawable.chars)):
-            for x in range(len(drawable.chars[0])):
-                if self._drawable_pointers[layer] and \
-                        self._drawable_pointers[layer][pos[0]+x][pos[1]+y]:
+        if widget in self.widget_locations.keys():
+            raise BearException('Cannot add the same widget twice')
+        for y in range(len(widget.chars)):
+            for x in range(len(widget.chars[0])):
+                if self._widget_pointers[layer] and \
+                        self._widget_pointers[layer][pos[0] + x][pos[1] + y]:
                     raise BearException('Drawables cannot collide within a layer')
-        drawable.terminal = self
-        self.drawable_locations[drawable] = DrawableLocation(pos=pos, layer=layer)
+        widget.terminal = self
+        self.widget_locations[widget] = WidgetLocation(pos=pos, layer=layer)
         terminal.layer(layer)
         running_color = 'white'
-        if not self._drawable_pointers[layer]:
+        if not self._widget_pointers[layer]:
             size = terminal.get('window.size')
             width, height = (int(x) for x in size.split('x'))
-            self._drawable_pointers[layer] = [[None for y in range(height)]
-                                              for x in range(width)]
-
-        for y in range(len(drawable.chars)):
-            for x in range(len(drawable.chars[y])):
-                if drawable.colors[y][x] != running_color:
-                    running_color = drawable.colors[y][x]
+            self._widget_pointers[layer] = [[None for y in range(height)]
+                                            for x in range(width)]
+        for y in range(len(widget.chars)):
+            for x in range(len(widget.chars[y])):
+                if widget.colors[y][x] != running_color:
+                    running_color = widget.colors[y][x]
                     terminal.color(running_color)
-                terminal.put(pos[0]+x, pos[1]+y, drawable.chars[y][x])
-                self._drawable_pointers[layer][pos[0]+x][pos[1]+y] = drawable
+                terminal.put(pos[0] + x, pos[1] + y, widget.chars[y][x])
+                self._widget_pointers[layer][pos[0] + x][pos[1] + y] = widget
         if running_color != self.default_color:
             terminal.color(self.default_color)
         if refresh:
             self.refresh()
     
-    def remove_drawable(self, drawable, refresh=False):
+    def remove_widget(self, widget, refresh=False):
         """
-        Remove drawable from the terminal
-        #TODO: check for other drawables that can become visible once
-        this one is destroyed
-        :param drawable:
-        :param refresh: whether to refresh the terminal after removing drawable.
-        If this is False, the drawable will be visible until the next
+        Remove widget from the terminal
+        :param widget: A widget to be removed
+        :param refresh: whether to refresh the terminal after removing a widget.
+        If this is False, the widget will be visible until the next
         `terminal.refresh()` call
         :return:
         """
-        corner = self.drawable_locations[drawable].pos
-        terminal.layer(self.drawable_locations[drawable].layer)
-        terminal.clear_area(*corner, len(drawable.chars[0]), len(drawable.chars))
-        for y in range(len(drawable.chars)):
-            for x in range(len(drawable.chars[0])):
-                self._drawable_pointers[self.drawable_locations[drawable].layer]\
+        corner = self.widget_locations[widget].pos
+        terminal.layer(self.widget_locations[widget].layer)
+        terminal.clear_area(*corner, len(widget.chars[0]), len(widget.chars))
+        for y in range(len(widget.chars)):
+            for x in range(len(widget.chars[0])):
+                self._widget_pointers[self.widget_locations[widget].layer]\
                     [corner[0] + x][corner[1] + y] = None
         if refresh:
             self.refresh()
-        del(self.drawable_locations[drawable])
+        del(self.widget_locations[widget])
         
-    def move_drawable(self, drawable, pos, refresh=False):
+    def move_widget(self, widget, pos, refresh=False):
         """
-        Move drawable to a new position.
-        Does not change the layer.
-        :param drawable:
+        Move widget to a new position.
+        Widgets can only be moved within the layer.
+        :param widget:
         :param pos:
         :return:
         """
-        layer = self.drawable_locations[drawable].layer
-        self.remove_drawable(drawable)
-        self.add_drawable(drawable, pos=pos, layer=layer)
+        layer = self.widget_locations[widget].layer
+        self.remove_widget(widget)
+        self.add_widget(widget, pos=pos, layer=layer)
         if refresh:
             self.refresh()
 
-    def update_drawable(self, drawable, refresh=False):
+    def update_widget(self, widget, refresh=False):
         """
-        Reload the drawable on the screen.
-        Works by removing it and adding it again on its current position
-        :param drawable:
+        Reload the widget on the screen.
+        Works by removing it and adding it again on its current position. This
+        method is meant to be used after the widget has updated its chars
+        and/or colors
+        :param widget:
         :return:
         """
-        layer = self.drawable_locations[drawable].layer
-        pos = self.drawable_locations[drawable].pos
-        self.remove_drawable(drawable)
-        self.add_drawable(drawable, pos=pos, layer=layer)
+        layer = self.widget_locations[widget].layer
+        pos = self.widget_locations[widget].pos
+        self.remove_widget(widget)
+        self.add_widget(widget, pos=pos, layer=layer)
         if refresh:
             self.refresh()
     
     #  Getting terminal info
 
-    def get_drawable_by_pos(self, pos, layer=None):
+    def get_widget_by_pos(self, pos, layer=None):
         """
-        Returns the drawable currently placed at the given position.
-        If layer is set, checks only that layer. Otherwise returns the drawable
+        Returns the widget currently placed at the given position.
+        If layer is set, checks only that layer. Otherwise returns the widget
         at the highest layer.
         :param pos: 
         :param layer: 
         :return: 
         """
         if layer:
-            return self._drawable_pointers[layer][pos[0]][pos[1]]
+            return self._widget_pointers[layer][pos[0]][pos[1]]
         else:
-            for layer_list in reversed(self._drawable_pointers):
+            for layer_list in reversed(self._widget_pointers):
                 if layer_list and layer_list[pos[0]][pos[1]]:
                     return layer_list[pos[0]][pos[1]]
             return None
@@ -312,7 +324,8 @@ class BearTerminal:
         """
         Check if terminal has input. If so, yield corresponding `BearEvent`(s)
         This method returns an iterator because it's possible there would be
-        more than one event in a single tick
+        more than one event in a single tick, eg when two buttons are pressed
+        simultaneously.
         :param self:
         :return:
         """
@@ -343,8 +356,8 @@ class BearTerminal:
 
 class BearLoop:
     """
-    A loop that passes event around every once in a while.
-    Every 1/fps seconds, to be precise
+    A loop that passes event around every 1/fps seconds.
+    FPS is only set on loop creation, which will probably be fixed later.
     """
     def __init__(self, terminal, queue, fps=30):
         # Assumes terminal to be running
@@ -357,7 +370,7 @@ class BearLoop:
     def run(self):
         """
         Start a loop.
-        It would run indefinitely and can be stopped with `self.stop`
+        It would run indefinitely until stopped with `self.stop`
         :return:
         """
         # An imaginary "zeroth" tick to give the first tick correct timing
@@ -389,8 +402,8 @@ class BearLoop:
         self.queue.dispatch_events()
         self.terminal.refresh()
     
-#  Widget classes
 
+#  Widget classes
 
 class Widget:
     """
@@ -401,7 +414,10 @@ class Widget:
     Accepted parameters:
     `chars`: a list of unicode characters
     `colors`: a list of colors. Anything that is accepted by terminal.color()
-    goes here (a color name or an 0xAARRGGBB integer)
+    goes here (a color name or an 0xAARRGGBB integer).
+    
+    These two list should be exactly the same shape, otherwise the BearException
+    is raised.
     """
     def __init__(self, chars, colors):
         if not isinstance(chars, list) or not isinstance(colors, list):
@@ -410,7 +426,7 @@ class Widget:
             raise BearException('Chars and colors should have the same shape')
         self.chars = chars
         self.colors = colors
-        # A drawable may want to know about the terminal it's attached to
+        # A widget may want to know about the terminal it's attached to
         self.terminal = None
         
     def on_event(self, event):
@@ -419,11 +435,12 @@ class Widget:
 
 class Label(Widget):
     """
-    A drawable that displays text.
+    A widget that displays text.
     Accepts only a single string, whether single- or multiline.
     Does not (yet) support complex text markup used by bearlibterminal
     :param text: string to be displayed
-    :param just: one of 'left', 'right' or 'center'. Default 'left'
+    :param just: horizontal text justification, one of 'left', 'right'
+    or 'center'. Default 'left'.
     :param color: bearlibterminal-compatible color. Default 'white'
     :param width: text area width. Defaults to the length of the longest
     substring in `text`
@@ -465,7 +482,7 @@ class Label(Widget):
     
 #  Misc classes
 
-class DrawableLocation:
+class WidgetLocation:
     """
     Data class with position and layer of a Widget
     """
