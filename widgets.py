@@ -1,6 +1,6 @@
 #  Widget and Listener classes
 
-from bear_utilities import shapes_equal, copy_shape
+from bear_utilities import shapes_equal, copy_shape, BearException
 from collections import deque
 
 class Widget:
@@ -107,3 +107,16 @@ class FPSCounter(Widget):
             self.terminal.update_widget(self)
         elif event.event_type == 'input':
             print(event.event_value)
+
+
+# Listeners
+class Listener:
+    """
+    A base class for the things that need to know about terminal and receive
+    events from the queue, but are not displayed on screen.
+    """
+    def __init__(self):
+        self.terminal = None
+    
+    def on_event(self, event):
+        raise NotImplementedError('Listener base class is doing nothing')
