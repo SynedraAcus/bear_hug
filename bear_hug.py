@@ -232,7 +232,7 @@ class BearTerminal:
         widget.terminal = self
         self.widget_locations[widget] = WidgetLocation(pos=pos, layer=layer)
         terminal.layer(layer)
-        running_color = 'white'
+        running_color = self.default_color
         if not self._widget_pointers[layer]:
             size = terminal.get('window.size')
             width, height = (int(x) for x in size.split('x'))
@@ -240,7 +240,8 @@ class BearTerminal:
                                             for x in range(width)]
         for y in range(len(widget.chars)):
             for x in range(len(widget.chars[y])):
-                if widget.colors[y][x] != running_color:
+                # Widget can have None as color for its empty cells
+                if widget.colors[y][x] and widget.colors[y][x] != running_color:
                     running_color = widget.colors[y][x]
                     terminal.color(running_color)
                 terminal.put(pos[0] + x, pos[1] + y, widget.chars[y][x])

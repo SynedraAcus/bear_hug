@@ -5,7 +5,7 @@
 import random
 
 from bear_hug import BearTerminal, BearLoop
-from widgets import Widget, FPSCounter, ClosingListener
+from widgets import Widget, FPSCounter, ClosingListener, Label, Layout
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
 
@@ -47,11 +47,18 @@ t = BearTerminal(size='30x30', title='Test window', filter=['keyboard', 'mouse']
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
 counter = FPSCounter()
-dispatcher.register_listener(counter, ['tick'])
+# Setting up a layout for FPS counter
+c = [['-', '-', '-', '-', '-'],
+     ['|', '.', '.', '.', '|'],
+     ['-', '-', '-', '-', '-']]
+layout = Layout(c, copy_shape(c, 'green'))
+layout.add_child(counter, (1, 1))
+dispatcher.register_listener(counter, 'tick')
+dispatcher.register_listener(layout, 'tick')
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 fireworks = [Firework(freq=1) for x in range(4)]
 t.start()
-t.add_widget(counter, pos=(1, 1), layer=0)
+t.add_widget(layout, pos=(1, 1), layer=0)
 layer = 1
 for f in fireworks:
     dispatcher.register_listener(f, ['tick'])

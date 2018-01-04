@@ -1,9 +1,11 @@
 #  Widget and Listener classes
 
 from bear_hug import BearTerminal
-from bear_utilities import shapes_equal, copy_shape, BearException
+from bear_utilities import shapes_equal, copy_shape, BearException, \
+    BearLayoutException
 from collections import deque
 from event import BearEvent
+
 
 class Widget:
     """
@@ -34,6 +36,118 @@ class Widget:
         pass
 
 
+class Layout(Widget):
+    """
+    A widget that can add others as its children.
+    All children get drawn to its `chars` and are thus displayed on a single
+    bearlibterminal layer. The layout does not explicitly pass events to its
+    children, they are expected to subscribe to event queue by themselves.
+    Children are allowed to overlap, but in that case the most recent one's char
+    is actually drawn.
+    The Layout is initialized with a single child, which is given chars and
+    colors provided at Layout creation. This child is available as l.children[0]
+    or as l.background
+    The Layout automatically redraws itself on `tick` event, whether its
+    children have updated or not. Due to the order events are emitted, any
+    changes that happened in children's chars or colors in current frame (except
+    as a direct response to input events) will be drawn on the *next* frame.
+    """
+    def __init__(self, chars, colors):
+        super().__init__(chars, colors)
+        self.children = []
+        # For every position, remember all the widgets that may want to place
+        # characters in it, but draw only the latest one
+        self._child_pointers = copy_shape(self.chars, None)
+        # copy_shape does not work with lists correctly, so.
+        for line in range(len(self._child_pointers)):
+            for char in range(len(self._child_pointers[0])):
+                self._child_pointers[line][char] = []
+        self.child_locations = {}
+        # The widget with Layout's chars and colors is created and added to the
+        # Layout as the first child. It is done even if both are empty, just in
+        # case someone
+        w = Widget(self.chars, self.colors)
+        self.add_child(w, pos=(0, 0))
+        
+    def add_child(self, child, pos):
+        """
+        Add a widget as a child at a given (relative) position.
+        The child has to be a Widget or a Widget subclass that haven't yet been
+        added to this Layout and whose dimensions are less than or equal to the
+        Layout's
+        :param child:
+        :return:
+        """
+        if not isinstance(child, Widget):
+            raise BearLayoutException('Cannot add non-Widget to a Layout')
+        if child in self.children:
+            raise BearLayoutException('Cannot add the same widget to layout twice')
+        if len(child.chars) > len(self.chars) or \
+                len(child.chars[0]) > len(self.chars[0]):
+            raise BearLayoutException('Cannot add child that is bigger than a Layout')
+        if len(child.chars) + pos[0] > len(self.chars) or \
+                len(child.chars[0]) + pos[1] > len(self.chars[0]):
+            raise BearLayoutException('Child won\'t fit at this position')
+        if child is self:
+            raise BearLayoutException('Cannot add Layout as its own child')
+        self.children.append(child)
+        self.child_locations[child] = pos
+        for y in range(len(child.chars)):
+            for x in range(len(child.chars[0])):
+                self._child_pointers[pos[1] + y][pos[0] + x].append(child)
+
+    @property
+    def background(self):
+        return self.children[0]
+    
+    # Layout's chars and colors are automatically calculated on the fly whenever
+    # they are needed. They are not meant to be set directly; for background,
+    # use self.background
+    
+    def _rebuild_self(self):
+        """
+        Build fresh chars and colors for self
+        :return:
+        """
+        chars = copy_shape(self.chars, ' ')
+        colors = copy_shape(self.colors, None)
+        for line in range(len(chars)):
+            for char in range(len(chars[0])):
+                child = self._child_pointers[line][char][-1]
+                # Below is addressing the correct child position
+                # try:
+                chars[line][char] = \
+                    child.chars[line-self.child_locations[child][1]] \
+                    [char - self.child_locations[child][0]]
+                # except IndexError:
+                #     print(line, char)
+                colors[line][char] = \
+                    child.colors[line - self.child_locations[child][1]] \
+                    [char - self.child_locations[child][0]]
+        self.chars = chars
+        self.colors = colors
+    
+    def on_event(self, event):
+        """
+        The Layout redraws itself on every frame
+        :return:
+        """
+        if event.event_type == 'tick':
+            self._rebuild_self()
+            self.terminal.update_widget(self)
+    
+    #Service
+    def get_absolute_pos(self, relative_pos):
+        """
+        Get an absolute position (in terminal coordinates) for any location
+        within self.
+        :param relative_pos:
+        :return:
+        """
+        self_pos = self.terminal.widget_locations(self).pos
+        return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
+        
+        
 class Label(Widget):
     """
     A widget that displays text.
@@ -106,7 +220,8 @@ class FPSCounter(Widget):
         if event.event_type == 'tick':
             self.samples_deque.append(event.event_value)
             self._update_self()
-            self.terminal.update_widget(self)
+            if self.terminal:
+                self.terminal.update_widget(self)
         elif event.event_type == 'input':
             print(event.event_value)
 

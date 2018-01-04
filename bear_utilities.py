@@ -2,6 +2,7 @@
 A collection of random functions useful for bear_hug
 """
 
+from copy import copy
 
 def shapes_equal(a, b):
     """
@@ -21,7 +22,12 @@ def shapes_equal(a, b):
 def copy_shape(l, value=None):
     """
     Takes a nested list and returns the new list of the same shape, completely
-    filled with the same value
+    filled with the same value.
+    Works incorrectly with mutable types (particularly containers) because it
+    fills the returned list with (pointers to) the same list, not independent
+    copies and adding to either of them would affect all. Since this function
+    gets called pretty often with primitives, eg None, and almost never with
+    lists, it is left as is and callers are to be made sure their lists are OK.
     :param l: initial list
     :param value: value to fill the list with
     :return:
@@ -53,9 +59,28 @@ def rectangles_collide(pos1, size1, pos2, size2):
             return True
     return False
 
+
+def has_values(l):
+    """
+    Returns True if a nested list contains at least one non-None value
+    :param l:
+    :return:
+    """
+    for row in l:
+        for value in row:
+            if value:
+                return True
+    return False
+
+
 #  Exceptions were moved here to avoid circular imports
 class BearException(Exception):
     pass
 
+
 class BearLoopException(BearException):
+    pass
+
+
+class BearLayoutException(BearException):
     pass
