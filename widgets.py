@@ -65,10 +65,11 @@ class Layout(Widget):
         self.child_locations = {}
         # The widget with Layout's chars and colors is created and added to the
         # Layout as the first child. It is done even if both are empty, just in
-        # case someone
+        # case someone wants to add background later
         w = Widget(self.chars, self.colors)
         self.add_child(w, pos=(0, 0))
         
+    # Operations on children
     def add_child(self, child, pos):
         """
         Add a widget as a child at a given (relative) position.
@@ -96,14 +97,51 @@ class Layout(Widget):
             for x in range(len(child.chars[0])):
                 self._child_pointers[pos[1] + y][pos[0] + x].append(child)
 
+    def remove_child(self, child, remove_completely=True):
+        """
+        Remove a child from a Layout.
+        :param child: the child to remove
+        :param remove_completely: if False, the child is only removed from the
+        screen, but remains in the children list. This is not intended to be
+        used and is included only to prevent self.move_child from messing with
+        child order.
+        :return:
+        """
+        if child not in self.children:
+            raise BearLayoutException('Layout can only remove its child')
+        # process pointers
+        for y in range(len(child.chars)):
+            for x in range(len(child.chars[0])):
+                self._child_pointers[self.child_locations[child][1] + y] \
+                        [self.child_locations[child][0] + x].remove(child)
+        if remove_completely:
+            del(self.child_locations[child])
+            self.children.remove(child)
+    
+    def move_child(self, child, new_pos):
+        self.remove_child(child, remove_completely=False)
+        self.add_child(child, pos=new_pos)
+    
+    # BG's chars and colors are not meant to be set directly
     @property
     def background(self):
         return self.children[0]
     
-    # Layout's chars and colors are automatically calculated on the fly whenever
-    # they are needed. They are not meant to be set directly; for background,
-    # use self.background
-    
+    @background.setter
+    def background(self, value):
+        if not isinstance(value, Widget):
+            raise BearLayoutException('Only Widget can be added as background')
+        if not shapes_equal(self.chars, value.chars):
+            # chars and colors are always the same size
+            raise BearLayoutException('Wrong Layout background size')
+        for row in range(len(self.chars)):
+            for column in range(len(self.chars)):
+                self._child_pointers[row][column][0] = value
+                # self.colors[row][column][0] = value
+        del self.child_locations[self.children[0]]
+        self.child_locations[value] = (0, 0)
+        self.children[0] = value
+        
     def _rebuild_self(self):
         """
         Build fresh chars and colors for self
@@ -115,12 +153,9 @@ class Layout(Widget):
             for char in range(len(chars[0])):
                 child = self._child_pointers[line][char][-1]
                 # Below is addressing the correct child position
-                # try:
                 chars[line][char] = \
                     child.chars[line-self.child_locations[child][1]] \
                     [char - self.child_locations[child][0]]
-                # except IndexError:
-                #     print(line, char)
                 colors[line][char] = \
                     child.colors[line - self.child_locations[child][1]] \
                     [char - self.child_locations[child][0]]
