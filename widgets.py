@@ -151,11 +151,14 @@ class Layout(Widget):
         colors = copy_shape(self.colors, None)
         for line in range(len(chars)):
             for char in range(len(chars[0])):
-                child = self._child_pointers[line][char][-1]
-                # Below is addressing the correct child position
-                chars[line][char] = \
-                    child.chars[line-self.child_locations[child][1]] \
-                    [char - self.child_locations[child][0]]
+                for child in self._child_pointers[line][char][::-1]:
+                    # Addressing the correct child position
+                    c = child.chars[line-self.child_locations[child][1]] \
+                        [char - self.child_locations[child][0]]
+                    if c != ' ':
+                        # Spacebars are used as empty space and are transparent
+                        chars[line][char] = c
+                        break
                 colors[line][char] = \
                     child.colors[line - self.child_locations[child][1]] \
                     [char - self.child_locations[child][0]]
