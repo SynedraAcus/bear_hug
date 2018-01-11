@@ -1,8 +1,10 @@
 """
 An event system.
-Events are passed around on every tick to listeners' `on_event` method according
-to their `event_type` subscriptions. If on_event returns an event, it is added
-to the back of the queue and processed within the same tick
+All events are passed around on every tick to listeners' `on_event` method according
+to their `event_type` subscriptions.
+`on_event` may return either a BearEvent or a list of BearEvents to be added to
+the queue. If a list is returned, the events are added (and will be processed)
+in the same order as they are in that list.
 """
 
 from bear_utilities import BearLoopException, BearException
@@ -124,6 +126,9 @@ class BearEventDispatcher:
                 if r:
                     if isinstance(r, BearEvent):
                         self.add_event(r)
+                    elif isinstance(r, list):
+                        for event in r:
+                            self.add_event(event)
                     else:
                         raise BearLoopException('on_event returns something ' +
                                                 'other than BearEvent')
