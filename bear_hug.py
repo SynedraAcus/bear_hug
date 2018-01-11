@@ -232,24 +232,12 @@ class BearTerminal:
         widget.terminal = self
         self.widget_locations[widget] = WidgetLocation(pos=pos, layer=layer)
         terminal.layer(layer)
-        running_color = self.default_color
         if not self._widget_pointers[layer]:
             size = terminal.get('window.size')
             width, height = (int(x) for x in size.split('x'))
             self._widget_pointers[layer] = [[None for y in range(height)]
                                             for x in range(width)]
-        for y in range(len(widget.chars)):
-            for x in range(len(widget.chars[y])):
-                # Widget can have None as color for its empty cells
-                if widget.colors[y][x] and widget.colors[y][x] != running_color:
-                    running_color = widget.colors[y][x]
-                    terminal.color(running_color)
-                terminal.put(pos[0] + x, pos[1] + y, widget.chars[y][x])
-                self._widget_pointers[layer][pos[0] + x][pos[1] + y] = widget
-        if running_color != self.default_color:
-            terminal.color(self.default_color)
-        if refresh:
-            self.refresh()
+        self.update_widget(widget, refresh)
     
     def remove_widget(self, widget, refresh=False):
         """
@@ -287,17 +275,25 @@ class BearTerminal:
 
     def update_widget(self, widget, refresh=False):
         """
-        Reload the widget on the screen.
-        Works by removing it and adding it again on its current position. This
-        method is meant to be used after the widget has updated its chars
-        and/or colors
+        Actually place widget chars on screen.
         :param widget:
         :return:
         """
-        layer = self.widget_locations[widget].layer
+        if widget not in self.widget_locations:
+            raise BearException('Cannot update non-added Widgets')
         pos = self.widget_locations[widget].pos
-        self.remove_widget(widget)
-        self.add_widget(widget, pos=pos, layer=layer)
+        layer = self.widget_locations[widget].layer
+        running_color = self.default_color
+        for y in range(len(widget.chars)):
+            for x in range(len(widget.chars[y])):
+                # Widget can have None as color for its empty cells
+                if widget.colors[y][x] and widget.colors[y][x] != running_color:
+                    running_color = widget.colors[y][x]
+                    terminal.color(running_color)
+                terminal.put(pos[0] + x, pos[1] + y, widget.chars[y][x])
+                self._widget_pointers[layer][pos[0] + x][pos[1] + y] = widget
+        if running_color != self.default_color:
+            terminal.color(self.default_color)
         if refresh:
             self.refresh()
     
