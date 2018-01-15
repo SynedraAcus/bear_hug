@@ -1,4 +1,6 @@
-#  Widget and Listener classes
+"""
+Various useful Widget and Listener classes
+"""
 
 from bear_hug import BearTerminal
 from bear_utilities import shapes_equal, copy_shape, BearException, \
@@ -86,8 +88,9 @@ class Layout(Widget):
         if len(child.chars) > len(self.chars) or \
                 len(child.chars[0]) > len(self.chars[0]):
             raise BearLayoutException('Cannot add child that is bigger than a Layout')
-        if len(child.chars) + pos[0] > len(self.chars) or \
-                len(child.chars[0]) + pos[1] > len(self.chars[0]):
+        if len(child.chars) + pos[1] > len(self.chars) or \
+                len(child.chars[0]) + pos[0] > len(self.chars[0]):
+            print(pos)
             raise BearLayoutException('Child won\'t fit at this position')
         if child is self:
             raise BearLayoutException('Cannot add Layout as its own child')

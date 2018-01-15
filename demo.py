@@ -5,9 +5,10 @@
 import random
 
 from bear_hug import BearTerminal, BearLoop
-from widgets import Widget, FPSCounter, ClosingListener, Label, Layout
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
+from resources import TxtLoader
+from widgets import Widget, FPSCounter, ClosingListener, Label, Layout
 
 
 class Firework(Widget):
@@ -61,8 +62,9 @@ class FireworkBox(Layout):
         self.background = new_bg
     
     def add_firework(self):
+        print(len(self.chars[0]), len(self.chars))
         pos = (random.randint(5, len(self.chars[0])-5),
-               random.randint(5, len(self.chars[1])-5))
+               random.randint(5, len(self.chars)-5))
         f = Firework(size=3, freq=3)
         self.dispatcher.register_listener(f, 'tick')
         self.fireworks.append(f)
@@ -93,7 +95,7 @@ class FireworkBox(Layout):
                 self.loop.fps -= 5
 
 
-t = BearTerminal(size='40x40', title='Test window', filter=['keyboard', 'mouse'])
+t = BearTerminal(size='50x45', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
 # Setting up a layout for FPS counter
@@ -108,11 +110,16 @@ dispatcher.register_listener(layout, ['service', 'tick'])
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 # Fireworks box
 # Remember dispatcher to subscribe children
-box = FireworkBox([['.' for x in range(30)] for x in range(30)],
-                  [['gray' for x in range(30)] for x in range(30)],
+box = FireworkBox([['.' for x in range(50)] for x in range(15)],
+                  [['gray' for x in range(50)] for x in range(15)],
                   dispatcher, loop)
 dispatcher.register_listener(box, ['key_down', 'service'])
+# A tank
+loader = TxtLoader('tank.txt')
+print(loader.get_image())
+tank = Widget(*loader.get_image())
 t.start()
-t.add_widget(box, (5, 5), layer=1)
 t.add_widget(layout, pos=(1, 1), layer=0)
+t.add_widget(box, (0, 30), layer=1)
+t.add_widget(tank, (20, 20), layer=2)
 loop.run()
