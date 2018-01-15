@@ -62,7 +62,6 @@ class FireworkBox(Layout):
         self.background = new_bg
     
     def add_firework(self):
-        print(len(self.chars[0]), len(self.chars))
         pos = (random.randint(5, len(self.chars[0])-5),
                random.randint(5, len(self.chars)-5))
         f = Firework(size=3, freq=3)
@@ -116,7 +115,6 @@ box = FireworkBox([['.' for x in range(50)] for x in range(15)],
 dispatcher.register_listener(box, ['key_down', 'service'])
 # A tank
 loader = TxtLoader('tank.txt')
-print(loader.get_image())
 tank = Widget(*loader.get_image())
 t.start()
 t.add_widget(layout, pos=(1, 1), layer=0)

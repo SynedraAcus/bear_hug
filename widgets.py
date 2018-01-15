@@ -138,7 +138,7 @@ class Layout(Widget):
             # chars and colors are always the same size
             raise BearLayoutException('Wrong Layout background size')
         for row in range(len(self.chars)):
-            for column in range(len(self.chars)):
+            for column in range(len(self.chars[0])):
                 self._child_pointers[row][column][0] = value
                 # self.colors[row][column][0] = value
         del self.child_locations[self.children[0]]
