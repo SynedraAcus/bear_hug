@@ -115,9 +115,11 @@ box = FireworkBox([['.' for x in range(50)] for x in range(15)],
 dispatcher.register_listener(box, ['key_down', 'service'])
 # A tank
 loader = TxtLoader('tank.txt')
-tank = Widget(*loader.get_image())
+tank1 = Widget(*loader.get_image_region(0, 0, 5, 6))
+tank2 = Widget(*loader.get_image_region(6, 0, 5, 6))
 t.start()
 t.add_widget(layout, pos=(1, 1), layer=0)
 t.add_widget(box, (0, 30), layer=1)
-t.add_widget(tank, (20, 20), layer=2)
+t.add_widget(tank2, (15, 10), layer=2)
+t.add_widget(tank1, (20, 23), layer=2)
 loop.run()

@@ -5,9 +5,12 @@ Loaders for the various ASCII-art formats
 from bear_utilities import BearException, copy_shape
 import os
 
+
 class ASCIILoader:
     """
-    An abstract base class for all the resource loaders
+    A base class for all the resource loaders. It knows how to return its chars
+    and colors (or a fragment thereof), but expects the children to do their
+    loading by themselves.
     """
     def __init__(self):
         self.chars = None
@@ -25,9 +28,10 @@ class ASCIILoader:
     def get_image_region(self, x, y, xsize, ysize):
         """
         Return some region of this loader's chars and colors
+        As everywhere, the coordinates start from 0.
         :return:
         """
-        if not self.chars or self.colors:
+        if not self.chars or not self.colors:
             raise BearException('Loader is empty')
         # Checking for the correct pos and size
         if x < 0 or x > len(self.chars[0]) or y < 0 or y > len(self.chars):
@@ -40,8 +44,11 @@ class ASCIILoader:
             r = []
             c = []
             for x_offset in range(xsize):
-                r.append(self.chars[y+y_offset][x+x_offset])
-                c.append(self.colors[y+y_offset][x+x_offset])
+                try:
+                    r.append(self.chars[y + y_offset][x + x_offset])
+                    c.append(self.colors[y + y_offset][x + x_offset])
+                except IndexError:
+                    print(x_offset, y_offset)
             ch.append(r)
             co.append(c)
         return ch, co
@@ -49,12 +56,14 @@ class ASCIILoader:
 
 class TxtLoader(ASCIILoader):
     """
-    A loader that reads a text file.
+    A loader that reads a plaintext file.
     On the creation, the loader accepts a filename (anything acceptable by
-    `open()`, default color and a bool `load_file`. The latter controls whether
-    the file is read immediately. If False (default), on loader creation it only
-    checks that the file exists; if True, its contents are immediately loaded to
-    `loader.chars`.
+    `open()`), default color and a bool `load_file`.
+    The first argument controls what color would the characters be assigned. As
+    `.txt` format does not store colors, all chars will be the same color. The
+    latter controls whether the file is read immediately. If False (default), on
+    loader creation it only checks that the file exists; if True, its contents
+    are immediately loaded to `loader.chars`.
     """
     def __init__(self, filename, default_color='white', load_file=False):
         super().__init__()
