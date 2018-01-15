@@ -68,6 +68,7 @@ class FireworkBox(Layout):
 
     def remove_firework(self):
         if self.fireworks:
+            self.dispatcher.unregister_listener(self.fireworks[-1])
             self.remove_child(self.fireworks[-1])
             del(self.fireworks[-1])
     
@@ -82,6 +83,7 @@ class FireworkBox(Layout):
             elif event.event_value == 'TK_RIGHT':
                 self.add_firework()
 
+
 t = BearTerminal(size='40x40', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
@@ -93,22 +95,15 @@ layout = Layout(c, copy_shape(c, 'green'))
 counter = FPSCounter()
 layout.add_child(counter, (1, 1))
 dispatcher.register_listener(counter, 'tick')
-dispatcher.register_listener(layout, 'tick')
+dispatcher.register_listener(layout, ['service', 'tick'])
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 # Fireworks box
 # Remember dispatcher to subscribe children
 box = FireworkBox([['.' for x in range(30)] for x in range(30)],
                   [['gray' for x in range(30)] for x in range(30)],
                   dispatcher)
-dispatcher.register_listener(box, ['tick', 'key_down'])
+dispatcher.register_listener(box, ['key_down', 'service'])
 t.start()
 t.add_widget(box, (5, 5), layer=1)
 t.add_widget(layout, pos=(1, 1), layer=0)
-# fireworks = [Firework(freq=1) for x in range(4)]
-# layer = 1
-# for f in fireworks:
-#     dispatcher.register_listener(f, ['tick'])
-#     t.add_widget(f, pos=(random.randint(0, 26), random.randint(0, 26)),
-#                  layer=layer)
-#     layer += 1 # To avoid collisions
 loop.run()

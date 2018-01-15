@@ -355,6 +355,17 @@ class BearLoop:
     """
     A loop that passes event around every 1/fps seconds.
     FPS is only set on loop creation, which will probably be fixed later.
+    Every tick, the loop emits two events. In the beginning of the tick it's
+    'tick' event whose value is time since the last similar event (in seconds).
+    In the end of the tick it's 'service' event with the value 'tick_over',
+    meant to allow widgets to update themselves to reflect whatever
+    changed in the last event. The first event is guaranteed to be emitted
+    before any other events related to this tick; the former is issued only
+    after the entire queue is processed, but the responses to it (if any) will
+    be dispatched after itself and before the next 'tick' event.
+    Generally, it's safer not to emit events in response to 'tick_over' event,
+    because whatever happens in response to *them* will only be drawn on the
+    next tick.
     """
     def __init__(self, terminal, queue, fps=30):
         # Assumes terminal to be running
@@ -401,6 +412,10 @@ class BearLoop:
             self.queue.add_event(event)
         self.queue.add_event(BearEvent(event_type='tick',
                                        event_value=time_since_last_tick))
+        self.queue.dispatch_events()
+        # Sending "Tick over" event, reminding widgets to update themselves
+        self.queue.add_event(BearEvent(event_type='service',
+                                       event_value='tick_over'))
         self.queue.dispatch_events()
         self.terminal.refresh()
         

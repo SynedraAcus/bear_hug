@@ -170,7 +170,7 @@ class Layout(Widget):
         The Layout redraws itself on every frame
         :return:
         """
-        if event.event_type == 'tick':
+        if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
             self.terminal.update_widget(self)
     
