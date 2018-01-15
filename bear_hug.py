@@ -5,7 +5,8 @@ art and widget-like behaviour.
 
 from bearlibterminal import terminal
 import bearlibterminal
-from bear_utilities import shapes_equal, copy_shape, BearException
+from bear_utilities import shapes_equal, copy_shape, BearException,\
+    BearLoopException
 from event import BearEvent
 
 import time
@@ -422,6 +423,16 @@ class BearLoop:
     def on_event(self, event):
         if event.event_value == 'shutdown':
             self.stopped = True
+            
+    @property
+    def fps(self):
+        return round(1/self.frame_time)
+    
+    @fps.setter
+    def fps(self, value):
+        if not isinstance(value, int):
+            raise BearLoopException('Only int acceptable as FPS')
+        self.frame_time = 1/value
         
     
 #  Misc classes

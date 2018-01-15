@@ -48,10 +48,12 @@ class FireworkBox(Layout):
     """
     A box that can add and remove fireworks on keypress
     """
-    def __init__(self, chars, colors, dispatcher):
+    def __init__(self, chars, colors, dispatcher, loop):
         super().__init__(chars, colors)
         self.dispatcher = dispatcher
+        self.loop = loop
         self.fireworks = []
+        self.fps = 30
         
     def update_bg(self, color):
         new_bg = Widget(copy_shape(self.chars, '.'),
@@ -75,13 +77,20 @@ class FireworkBox(Layout):
     def on_event(self, event):
         super().on_event(event)
         if event.event_type == 'key_down':
+            # Changing background
             if event.event_value == 'TK_SPACE':
                 self.update_bg(random.choice(['green', 'yellow', 'gray',
                                               'purple', 'magenta']))
+            # Adding and removing fireworks
             elif event.event_value == 'TK_LEFT':
                 self.remove_firework()
             elif event.event_value == 'TK_RIGHT':
                 self.add_firework()
+            # Changing FPS
+            elif event.event_value == 'TK_UP':
+                self.loop.fps = self.loop.fps + 5
+            elif event.event_value == 'TK_DOWN':
+                self.loop.fps -= 5
 
 
 t = BearTerminal(size='40x40', title='Test window', filter=['keyboard', 'mouse'])
@@ -101,7 +110,7 @@ dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 # Remember dispatcher to subscribe children
 box = FireworkBox([['.' for x in range(30)] for x in range(30)],
                   [['gray' for x in range(30)] for x in range(30)],
-                  dispatcher)
+                  dispatcher, loop)
 dispatcher.register_listener(box, ['key_down', 'service'])
 t.start()
 t.add_widget(box, (5, 5), layer=1)

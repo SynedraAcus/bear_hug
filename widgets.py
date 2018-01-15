@@ -238,12 +238,15 @@ class Label(Widget):
 class FPSCounter(Widget):
     """
     A simple widget that measures FPS.
-    Actually just prints 1/(average runtime over the last 100 ticks, in seconds)
-    Updates every frame
+    Actually just prints 1/(average runtime over the last 100 ticks in seconds),
+    so it takes 100 ticks to get an accurate reading. Not relevant except on the
+    first several seconds of the program run or after FPS has changed, but if it
+    seems like the game takes a second or two to reach the target FPS -- it just
+    seems that way.
     """
     def __init__(self, *args, **kwargs):
         self.samples_deque = deque(maxlen=100)
-        # Something to be dispayed on th 1st frame
+        # Something to be dispayed on th 1st frame. 30 is a reasonable default
         chars = [list(str(30))]
         color = copy_shape(chars, 'white')
         super().__init__(chars, color, *args, **kwargs)
