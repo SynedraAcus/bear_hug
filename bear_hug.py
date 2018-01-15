@@ -23,7 +23,7 @@ class BearTerminal:
     # kwargs to init are passed to bearlibterminal.terminal.set()
     # Currently only library settings are supported
     accepted_kwargs = {'encoding': 'terminal', 'size': 'window',
-                       'cellsize': 'window', 'title': 'window', 'icon':'window',
+                       'cellsize': 'window', 'title': 'window', 'icon': 'window',
                        'resizeable': 'window', 'fullscreen': 'window',
                        
                        'filter': 'input', 'precise-mouse': 'input',
@@ -177,6 +177,7 @@ class BearTerminal:
         :return:
         """
         terminal.open()
+        terminal.set('font: ./cp437_12x12.png, size=12x12')
         if self.outstring:
             terminal.set(self.outstring)
         self.refresh()
