@@ -120,8 +120,10 @@ tank1 = Widget(*loader.get_image_region(0, 0, 5, 6))
 tank2 = Widget(*loader.get_image_region(6, 0, 5, 6))
 # Tree and lamp, XPLoader test
 xploader = XpLoader('tree_lamp.xp')
+# A tree without layer2 apples
+tree2 = Widget(*xploader.get_layer_region(0, 0, 1, 6, 8))
+# Multilayered tree and single-layered lamp
 tree = Widget(*xploader.get_image_region(0, 1, 6, 8))
-tree2 = deepcopy(tree)
 lamp = Widget(*xploader.get_image_region(7, 1, 7, 8))
 t.start()
 t.add_widget(layout, pos=(1, 1), layer=0)

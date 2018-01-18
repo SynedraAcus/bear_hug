@@ -143,22 +143,57 @@ class XpLoader(ASCIILoader):
         self.layer_count = None
     
     def get_image(self):
+        """
+        Return chars and colors for the entire image. For each cell only the
+        values from the topmost layer are used. Background colors are
+        ignored altogether.
+        :return:
+        """
         if not self.chars:
             self._process_xp_file()
             self._get_topmost_layer()
         return super().get_image()
 
     def get_image_region(self, x, y, xsize, ysize):
+        """
+        Return chars and colors for the image region. For each cell only the
+        values from the topmost layer are used. Background colors are
+        ignored altogether.
+        :param x:
+        :param y:
+        :param xsize:
+        :param ysize:
+        :return:
+        """
         if not self.chars:
             self._process_xp_file()
             self._get_topmost_layer()
         return super().get_image_region(x, y, xsize, ysize)
     
     def get_layer(self, layer):
-        pass
+        if not self.layers:
+            self._process_xp_file()
+        if layer >= self.layer_count:
+            raise BearException('Nonexistent layer in XpLoader')
+        return deepcopy(self.layers[layer][0]), deepcopy(self.layers[layer][1])
     
     def get_layer_region(self, layer, x, y, xsize, ysize):
-        pass
+        if not self.layers:
+            self._process_xp_file()
+        if layer >= self.layer_count:
+            raise BearException('Nonexistent layer in XpLoader')
+        # Shamelessly copypasted from ASCIILoader.get_image_region
+        ch = []
+        co = []
+        for y_offset in range(ysize):
+            r = []
+            c = []
+            for x_offset in range(xsize):
+                r.append(self.layers[layer][0][y + y_offset][x + x_offset])
+                c.append(self.layers[layer][1][y + y_offset][x + x_offset])
+            ch.append(r)
+            co.append(c)
+        return ch, co
 
     def _process_xp_file(self):
         gz_handle = gzip.open(self.filename)
@@ -176,10 +211,10 @@ class XpLoader(ASCIILoader):
             for row in range(self.height):
                 for column in range(self.width):
                     for layer in self.layers[::-1]:
-                        if layer[row][column] != ' ':
+                        if layer[0][row][column] != ' ':
                             self.chars[row][column] = layer[0][row][column]
                             self.colors[row][column] = layer[1][row][column]
-                            continue
+                            break
         
     # All code from here to the end of the class is adapted from XPLoaderPy3
     def _load_xp_string(self, file_string, reverse_endian=True):
@@ -243,12 +278,12 @@ class XpLoader(ASCIILoader):
             width = width[::-1]
             height = height[::-1]
     
-        width = int(base64.b16encode(width), 16)
-        height = int(base64.b16encode(height), 16)
+        self.width = int(base64.b16encode(width), 16)
+        self.height = int(base64.b16encode(height), 16)
         cells = []
-        for x in range(width):
+        for x in range(self.width):
             row = []
-            for y in range(height):
+            for y in range(self.height):
                 cell_data_raw = layer_string[offset:offset +
                                                     self.layer_cell_bytes]
                 cell_data = self._parse_individual_cell(cell_data_raw,
@@ -257,7 +292,6 @@ class XpLoader(ASCIILoader):
                 offset += self.layer_cell_bytes
             cells.append(row)
         cells = rotate_list(cells)
-        # print(cells)
         chars = copy_shape(cells, None)
         colors = copy_shape(cells, self.default_color)
         for r in range(len(cells)):
@@ -301,9 +335,6 @@ class XpLoader(ASCIILoader):
                 if len(rgb[index]) < length:
                     rgb[index] = '0'*(length - len(rgb[index])) + rgb[index]
         color = '#' + ''.join(rgb)
-        if len(color) % 3 > 0:
-            print(fore_r, fore_g, fore_b)
-            print(color)
         back_r = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
         back_g = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
