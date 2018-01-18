@@ -105,7 +105,7 @@ class XpLoader(ASCIILoader):
     As with the other loaders, the file is not parsed until one of the `get_*`
     methods gets called. Its existence, though, is checked on Loader creation.
     
-    Most of the code is taken from MIT-licensed XPLoaderPy3, copyrigh
+    Most of the code is taken from MIT-licensed XPLoaderPy3, copyright
     Sean Hagar, Erwan Castioni and Gawein Le Goff.
     
     As the bear_hug widget API does not allow multi-layered widgets, `get_image`
@@ -171,6 +171,15 @@ class XpLoader(ASCIILoader):
         return super().get_image_region(x, y, xsize, ysize)
     
     def get_layer(self, layer):
+        """
+        Get chars and (foreground) colors for the entire image layer. This
+        method does not check layer size and returns whatever available.
+        
+        By default, the REXPaint creates layers the size of the entire image, so
+        this shouldn't be much of an issue.
+        :param layer:
+        :return:
+        """
         if not self.layers:
             self._process_xp_file()
         if layer >= self.layer_count:
@@ -217,6 +226,8 @@ class XpLoader(ASCIILoader):
                             break
         
     # All code from here to the end of the class is adapted from XPLoaderPy3
+    # Looks like a mess of crutches on top of other crutches, but I'm not really
+    # up to building an elegant solution right now.
     def _load_xp_string(self, file_string, reverse_endian=True):
         """
         Parse REXpaint string and populate self.layers
@@ -316,14 +327,10 @@ class XpLoader(ASCIILoader):
         if not char or char == '\x00':
             char = ' '
         offset += self.layer_keycode_bytes
-        color = ''
-        # color += base64.b16encode(cell_string[offset:offset+1])
         fore_r = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
-        # color += base64.b16encode(cell_string[offset:offset + 1])
         fore_g = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
-        # color += base64.b16encode(cell_string[offset:offset + 1])
         fore_b = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
         # Covering cases when we have like '0x4' and '0xAB' in color
@@ -335,6 +342,8 @@ class XpLoader(ASCIILoader):
                 if len(rgb[index]) < length:
                     rgb[index] = '0'*(length - len(rgb[index])) + rgb[index]
         color = '#' + ''.join(rgb)
+        # `Back_*` values are ignored, but this code isn't removed in case they
+        # are needed later.
         back_r = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
         back_g = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
@@ -342,12 +351,3 @@ class XpLoader(ASCIILoader):
         back_b = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
         return char, color
-        # return {
-        #     'keycode': keycode,
-        #     'fore_r': fore_r,
-        #     'fore_g': fore_g,
-        #     'fore_b': fore_b,
-        #     'back_r': back_r,
-        #     'back_g': back_g,
-        #     'back_b': back_b,
-        # }
