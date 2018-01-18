@@ -3,11 +3,12 @@
 # Manual test for bearhug. Shows some basic stuff using bear_hug library
 
 import random
+from copy import deepcopy
 
 from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
-from resources import TxtLoader
+from resources import TxtLoader, XpLoader
 from widgets import Widget, FPSCounter, ClosingListener, Label, Layout
 
 
@@ -113,13 +114,21 @@ box = FireworkBox([['.' for x in range(50)] for x in range(15)],
                   [['gray' for x in range(50)] for x in range(15)],
                   dispatcher, loop)
 dispatcher.register_listener(box, ['key_down', 'service'])
-# A tank
+# A tank, TXTLoader test
 loader = TxtLoader('tank.txt')
 tank1 = Widget(*loader.get_image_region(0, 0, 5, 6))
 tank2 = Widget(*loader.get_image_region(6, 0, 5, 6))
+# Tree and lamp, XPLoader test
+xploader = XpLoader('tree_lamp.xp')
+tree = Widget(*xploader.get_image_region(0, 1, 6, 8))
+tree2 = deepcopy(tree)
+lamp = Widget(*xploader.get_image_region(7, 1, 7, 8))
 t.start()
 t.add_widget(layout, pos=(1, 1), layer=0)
 t.add_widget(box, (0, 30), layer=1)
-t.add_widget(tank2, (15, 10), layer=2)
-t.add_widget(tank1, (20, 23), layer=2)
+t.add_widget(tank2, (15, 10), layer=3)
+t.add_widget(tank1, (20, 23), layer=3)
+t.add_widget(tree, (5, 5), layer=2)
+t.add_widget(tree2, (40, 12), layer=2)
+t.add_widget(lamp, (32, 3), layer=2)
 loop.run()

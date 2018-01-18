@@ -41,6 +41,21 @@ def copy_shape(l, value=None):
     return r
 
 
+def rotate_list(l):
+    """
+    Take a nested list of (x, y) dimensions, return an (y, x) list
+    :param l:
+    :return:
+    """
+    # Without loss of generality, presume list is row-first and we need it
+    # column-first
+    r = [[None for x in range(len(l))] for x in range(len(l[0]))]
+    for row_index, row in enumerate(l):
+        for column_index, column_value in enumerate(row):
+            r[column_index][row_index] = column_value
+    return r
+    
+
 def rectangles_collide(pos1, size1, pos2, size2):
     """
     Return True if the rectangles collide

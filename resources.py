@@ -2,7 +2,10 @@
 Loaders for the various ASCII-art formats
 """
 
-from bear_utilities import BearException, copy_shape
+from bear_utilities import BearException, copy_shape, rotate_list
+from copy import deepcopy
+import base64
+import gzip
 import os
 
 
@@ -94,3 +97,226 @@ class TxtLoader(ASCIILoader):
         if not self.chars or not self.colors:
             self._load_file()
         return super().get_image_region(x, y, xsize, ysize)
+
+
+class XpLoader(ASCIILoader):
+    """
+    A loader that reads REXPaint *.xp files.
+    As with the other loaders, the file is not parsed until one of the `get_*`
+    methods gets called. Its existence, though, is checked on Loader creation.
+    
+    Most of the code is taken from MIT-licensed XPLoaderPy3, copyrigh
+    Sean Hagar, Erwan Castioni and Gawein Le Goff.
+    
+    As the bear_hug widget API does not allow multi-layered widgets, `get_image`
+    and `get_image_region` return the image with the only the character and
+    color from the highest layer which is non-empty for a given cell. For
+    getting data from layers separately, use `get_layer` and `get_layer_region`.
+    
+    Background colors are ignored altogether.
+    """
+
+    version_bytes = 4
+    layer_count_bytes = 4
+
+    layer_width_bytes = 4
+    layer_height_bytes = 4
+    layer_keycode_bytes = 4
+    layer_fore_rgb_bytes = 3
+    layer_back_rgb_bytes = 3
+    layer_cell_bytes = layer_keycode_bytes + layer_fore_rgb_bytes + \
+                       layer_back_rgb_bytes
+    transparent_cell_back_r = 255
+    transparent_cell_back_g = 0
+    transparent_cell_back_b = 255
+    
+    def __init__(self, filename, default_color='white'):
+        super().__init__()
+        if not os.path.exists(filename):
+            raise ValueError('Nonexistent path {}'.format(filename))
+        self.filename = filename
+        self.default_color = default_color
+        self.layers = []
+        self.rexpaint_version = None
+        self.width = None
+        self.height = None
+        self.layer_count = None
+    
+    def get_image(self):
+        if not self.chars:
+            self._process_xp_file()
+            self._get_topmost_layer()
+        return super().get_image()
+
+    def get_image_region(self, x, y, xsize, ysize):
+        if not self.chars:
+            self._process_xp_file()
+            self._get_topmost_layer()
+        return super().get_image_region(x, y, xsize, ysize)
+    
+    def get_layer(self, layer):
+        pass
+    
+    def get_layer_region(self, layer, x, y, xsize, ysize):
+        pass
+
+    def _process_xp_file(self):
+        gz_handle = gzip.open(self.filename)
+        line = gz_handle.read()
+        self._load_xp_string(line)
+        
+    def _get_topmost_layer(self):
+        if self.layer_count == 1:
+            self.chars = deepcopy(self.layers[0][0])
+            self.colors = deepcopy(self.layers[0][1])
+        else:
+            self.chars = [ [' ' for x in range(self.width)]
+                           for y in range(self.height)]
+            self.colors = copy_shape(self.chars, None)
+            for row in range(self.height):
+                for column in range(self.width):
+                    for layer in self.layers[::-1]:
+                        if layer[row][column] != ' ':
+                            self.chars[row][column] = layer[0][row][column]
+                            self.colors[row][column] = layer[1][row][column]
+                            continue
+        
+    # All code from here to the end of the class is adapted from XPLoaderPy3
+    def _load_xp_string(self, file_string, reverse_endian=True):
+        """
+        Parse REXpaint string and populate self.layers
+        :param file_string:
+        :param reverse_endian:
+        :return:
+        """
+        offset = 0
+        version = file_string[offset: offset + self.version_bytes]
+        offset += self.version_bytes
+        layer_count = file_string[offset: offset + self.layer_count_bytes]
+        offset += self.layer_count_bytes
+        if reverse_endian:
+            version = version[::-1]
+            layer_count = layer_count[::-1]
+        self.version = int(base64.b16encode(version), 16)
+        self.layer_count = int(base64.b16encode(layer_count), 16)
+        current_largest_width = 0
+        current_largest_height = 0
+        for layer in range(self.layer_count):
+            # slight lookahead to figure out how much data to feed load_layer
+            this_layer_width = file_string[offset:offset +
+                                           self.layer_width_bytes]
+            this_layer_height = file_string[
+                            offset + self.layer_width_bytes:offset +
+                            self.layer_width_bytes + self.layer_height_bytes]
+            
+            if reverse_endian:
+                this_layer_width = this_layer_width[::-1]
+                this_layer_height = this_layer_height[::-1]
+                
+            this_layer_width = int(base64.b16encode(this_layer_width), 16)
+            this_layer_height = int(base64.b16encode(this_layer_height), 16)
+            current_largest_width = max(current_largest_width, this_layer_width)
+            current_largest_height = max(current_largest_height,
+                                         this_layer_height)
+        
+            layer_data_size = self.layer_width_bytes + self.layer_height_bytes\
+                + (self.layer_cell_bytes * this_layer_width * this_layer_height)
+            layer_data = self._parse_layer(
+                file_string[offset:offset + layer_data_size], reverse_endian)
+            self.layers.append(layer_data)
+            offset += layer_data_size
+
+    def _parse_layer(self, layer_string, reverse_endian=True):
+        """
+        Parse a file portion for a single layer
+        :param layer_string:
+        :param reverse_endian:
+        :return:
+        """
+        offset = 0
+        width = layer_string[offset:offset + self.layer_width_bytes]
+        offset += self.layer_width_bytes
+        height = layer_string[offset:offset + self.layer_height_bytes]
+        offset += self.layer_height_bytes
+    
+        if reverse_endian:
+            width = width[::-1]
+            height = height[::-1]
+    
+        width = int(base64.b16encode(width), 16)
+        height = int(base64.b16encode(height), 16)
+        cells = []
+        for x in range(width):
+            row = []
+            for y in range(height):
+                cell_data_raw = layer_string[offset:offset +
+                                                    self.layer_cell_bytes]
+                cell_data = self._parse_individual_cell(cell_data_raw,
+                                                        reverse_endian)
+                row.append(cell_data)
+                offset += self.layer_cell_bytes
+            cells.append(row)
+        cells = rotate_list(cells)
+        # print(cells)
+        chars = copy_shape(cells, None)
+        colors = copy_shape(cells, self.default_color)
+        for r in range(len(cells)):
+            for c in range(len(cells[0])):
+                chars[r][c] = cells[r][c][0]
+                colors[r][c] = cells[r][c][1]
+        return chars, colors
+
+    def _parse_individual_cell(self, cell_string, reverse_endian=True):
+        """
+        Process individual cell data
+        :param cell_string:
+        :param reverse_endian:
+        :return:
+        """
+        offset = 0
+        keycode = cell_string[offset:offset + self.layer_keycode_bytes]
+        if reverse_endian:
+            keycode = keycode[::-1]
+        keycode = int(base64.b16encode(keycode), 16)
+        char = bytes([keycode]).decode('cp437')
+        if not char or char == '\x00':
+            char = ' '
+        offset += self.layer_keycode_bytes
+        color = ''
+        # color += base64.b16encode(cell_string[offset:offset+1])
+        fore_r = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
+        offset += 1
+        # color += base64.b16encode(cell_string[offset:offset + 1])
+        fore_g = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
+        offset += 1
+        # color += base64.b16encode(cell_string[offset:offset + 1])
+        fore_b = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
+        offset += 1
+        # Covering cases when we have like '0x4' and '0xAB' in color
+        # panning shorter values with zeroes to max size
+        rgb = [str(hex(x)).split('x')[1] for x in (fore_r, fore_g, fore_b)]
+        length = max((len(x) for x in rgb))
+        if length >= 2:
+            for index in range(len(rgb)):
+                if len(rgb[index]) < length:
+                    rgb[index] = '0'*(length - len(rgb[index])) + rgb[index]
+        color = '#' + ''.join(rgb)
+        if len(color) % 3 > 0:
+            print(fore_r, fore_g, fore_b)
+            print(color)
+        back_r = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
+        offset += 1
+        back_g = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
+        offset += 1
+        back_b = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
+        offset += 1
+        return char, color
+        # return {
+        #     'keycode': keycode,
+        #     'fore_r': fore_r,
+        #     'fore_g': fore_g,
+        #     'fore_b': fore_b,
+        #     'back_r': back_r,
+        #     'back_g': back_g,
+        #     'back_b': back_b,
+        # }
