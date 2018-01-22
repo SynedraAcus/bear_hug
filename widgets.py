@@ -12,16 +12,18 @@ from event import BearEvent
 class Widget:
     """
     The base class for things that can be placed on the terminal.
-    This class is inactive and is intended for purely decorative non-animated
-    objects. Event processing and animations are covered by its subclasses.
+    This class is inactive and is intended to be either inherited from or used
+    for purely decorative non-animated objects. Event processing and animations
+    are covered by its subclasses; while it has `on_event()` method, it does
+    nothing.
 
     Accepted parameters:
     `chars`: a list of unicode characters
     `colors`: a list of colors. Anything that is accepted by terminal.color()
-    goes here (a color name or an 0xAARRGGBB integer).
+    goes here (a color name or a 0xAARRGGBB/0xRRGGBB/0xRGB/0xARGB integer).
 
-    These two list should be exactly the same shape, otherwise the BearException
-    is raised.
+    `chars` and `colors` should be exactly the same shape, otherwise the
+    BearException is raised.
     """
     
     def __init__(self, chars, colors):
@@ -35,6 +37,9 @@ class Widget:
         self.terminal = None
     
     def on_event(self, event):
+        # Root widget does not raise anything here, because Widget() can be
+        # erroneously subscribed to a queue. While useless, that's not really a
+        # fatal error.
         pass
 
 
@@ -269,6 +274,53 @@ class FPSCounter(Widget):
         elif event.event_type == 'input':
             print(event.event_value)
 
+
+class MousePosWidget(Widget):
+    """
+    A simple widget akin to FPSCounter that listens to TK_MOUSE_MOVE events.
+    
+    In order to work, it needs `self.terminal` to be set to the current
+    terminal, which means it should either be added to the terminal directly
+    (without any Layouts) or it should be set manually before MousePosWidget
+    gets its first `tick` event.
+    """
+    
+    def __init__(self, *args, **kwargs):
+        chars = [[' ' for x in range(7)]]
+        colors = copy_shape(chars, 'white')
+        super().__init__(chars, colors, *args, **kwargs)
+        self.mouse_line = ''
+        
+    def on_event(self, event):
+        if event.event_type == 'tick':
+            # Only used at the very first tick. Without it, the widget would
+            # display no position at all until the first 'TK_MOUSE_MOVE' event
+            if not self.mouse_line:
+                self.mouse_line = self.get_mouse_line()
+                self._update_chars()
+        elif event.event_type == 'misc_input' and \
+                     event.event_value == 'TK_MOUSE_MOVE':
+            self.mouse_line = self.get_mouse_line()
+            self._update_chars()
+            
+    def _update_chars(self):
+        self.chars = [list(self.mouse_line)]
+        if self in self.terminal.widget_locations:
+            # widget_locations is set iff the widget is connected to a terminal
+            # directly
+            self.terminal.update_widget(self)
+
+    def get_mouse_line(self):
+        if not self.terminal:
+            raise BearException('MousePosWidget is not connected to a terminal')
+        x = str(self.terminal.check_state('TK_MOUSE_X'))
+        if len(x) < 3:
+            x = '0' * (3-len(x)) + x
+        y = str(self.terminal.check_state('TK_MOUSE_Y'))
+        if len(y) < 3:
+            y = '0' * (3 - len(y)) + y
+        return x + 'x' + y
+        
 
 # Listeners
 class Listener:

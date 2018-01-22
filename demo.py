@@ -9,7 +9,8 @@ from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
 from resources import TxtLoader, XpLoader
-from widgets import Widget, FPSCounter, ClosingListener, Label, Layout
+from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
+    MousePosWidget
 
 
 class Firework(Widget):
@@ -108,6 +109,8 @@ layout.add_child(counter, (1, 1))
 dispatcher.register_listener(counter, 'tick')
 dispatcher.register_listener(layout, ['service', 'tick'])
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
+mouser = MousePosWidget()
+dispatcher.register_listener(mouser, ['tick', 'misc_input'])
 # Fireworks box
 # Remember dispatcher to subscribe children
 box = FireworkBox([['.' for x in range(50)] for x in range(15)],
@@ -127,6 +130,7 @@ tree = Widget(*xploader.get_image_region(0, 1, 6, 8))
 lamp = Widget(*xploader.get_image_region(7, 1, 7, 8))
 t.start()
 t.add_widget(layout, pos=(1, 1), layer=0)
+t.add_widget(mouser, pos=(1, 5), layer=5)
 t.add_widget(box, (0, 30), layer=1)
 t.add_widget(tank2, (15, 10), layer=3)
 t.add_widget(tank1, (20, 23), layer=3)
