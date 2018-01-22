@@ -77,7 +77,8 @@ def rectangles_collide(pos1, size1, pos2, size2):
 
 def has_values(l):
     """
-    Returns True if a nested list contains at least one non-None value
+    Returns True if a nested list ( [[...], [...], ...] ) contains at least
+    one truthy value.
     :param l:
     :return:
     """

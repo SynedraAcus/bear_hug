@@ -15,7 +15,9 @@ class Widget:
     This class is inactive and is intended to be either inherited from or used
     for purely decorative non-animated objects. Event processing and animations
     are covered by its subclasses; while it has `on_event()` method, it does
-    nothing.
+    nothing. This allows Widgets to work without subscribing to the queue and
+    saves some tacts on not redrawing them unless the Widget itself considers it
+    necessary.
 
     Accepted parameters:
     `chars`: a list of unicode characters
@@ -52,7 +54,33 @@ class Widget:
             raise BearException('Only a BearTerminal can be set as ' +
                                 'Widget.terminal')
         self._terminal = value
-
+        
+    def flip(self, axis):
+        """
+        Flip a widget along one of the axes.
+        
+        Rotates chars and colors either horizontally ('x' or 'horizontal') or
+        vertically ('y' or 'vertical'). Note that this method has **extremely**
+        limited uses: first, it only affects chars and colors *as they are now*.
+        If later the widget gets updated via animation, updating label text,
+        Layout's children being redrawn, etc., it will be un-flipped again.
+        Second, most ASCII-art does not take it well. You're probably safe with
+        something almost symmetrical, like background garbage and such, but for
+        complex images it's better to provide both left and right versions.
+        
+        Unlike raster and vector graphics, there is no general way to flip an
+        ASCII image programmatically. Except, of course, flipping tiles
+        themselves which I find aesthetically unacceptable for my projects.
+        
+        :param axis:
+        :return:
+        """
+        if axis in ('x', 'horizontal'):
+            self.chars = [self.chars[x][::-1] for x in range(len(self.chars))]
+            self.colors = [self.colors[x][::-1] for x in range(len(self.colors))]
+        elif axis in ('y', 'vertical'):
+            self.chars = self.chars[::-1]
+            self.colors = self.colors[::-1]
 
 class Layout(Widget):
     """
@@ -342,6 +370,9 @@ class SimpleAnimationWidget(Widget):
     """
     def __init__(self, frames, fps):
         super().__init__(*frames[0])
+        if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
+             or not all((shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
+            raise BearException('Frames should be equal size')
         self.frames = frames
         self.frame_time = 1/fps
         self.running_index = 0

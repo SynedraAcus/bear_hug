@@ -114,6 +114,20 @@ class DevMonitor(Layout):
         self._terminal = value
 
 
+class Flipper(Widget):
+    """
+    A flipping test
+    """
+    def __init__(self, chars, colors, flip_axis):
+        super().__init__(chars, colors)
+        self.flip_axis = flip_axis
+        
+    def on_event(self, event):
+        if event.event_type == 'key_down' and event.event_value == 'TK_SPACE':
+            self.flip(self.flip_axis)
+        self.terminal.update_widget(self)
+        
+        
 t = BearTerminal(size='50x45', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
@@ -147,12 +161,18 @@ dispatcher.register_listener(monitor, ['tick', 'service'])
 barrel = SimpleAnimationWidget((atlas.get_element('barrel_1'),
                                 atlas.get_element('barrel_2')), 2)
 dispatcher.register_listener(barrel, ['tick', 'service'])
+
+# Flipper
+x_flipper = Flipper(*atlas.get_element('bottle_punk'), 'x')
+y_flipper = Flipper(*atlas.get_element('bottle_punk'), 'y')
+dispatcher.register_listener(x_flipper, ['key_down'])
+dispatcher.register_listener(y_flipper, 'key_down')
+
 t.start()
-t.add_widget(monitor, pos=(0, 35), layer=5)
+t.add_widget(monitor, pos=(0, 35), layer=1)
 t.add_widget(box, (12, 35), layer=1)
-t.add_widget(tank2, (15, 10), layer=3)
-t.add_widget(tank1, (20, 23), layer=3)
 t.add_widget(barrel, (5, 5), layer=2)
-t.add_widget(tree2, (40, 12), layer=2)
-t.add_widget(lamp, (32, 3), layer=2)
+t.add_widget(lamp, (43, 1), layer=2)
+t.add_widget(x_flipper, (20, 15), layer=3)
+t.add_widget(y_flipper, (38, 15), layer=3)
 loop.run()
