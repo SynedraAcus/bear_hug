@@ -255,13 +255,15 @@ class FPSCounter(Widget):
     def __init__(self, *args, **kwargs):
         self.samples_deque = deque(maxlen=100)
         # Something to be dispayed on th 1st frame. 30 is a reasonable default
-        chars = [list(str(30))]
+        chars = [list(str(100))]
         color = copy_shape(chars, 'white')
         super().__init__(chars, color, *args, **kwargs)
     
     def _update_self(self):
-        self.chars = [
-            list(str(round(len(self.samples_deque) / sum(self.samples_deque))))]
+        fps = str(round(len(self.samples_deque) /
+                            sum(self.samples_deque)))
+        fps = fps.rjust(3, '0')
+        self.chars = [list(fps)]
         self.colors = copy_shape(self.chars, 'white')
     
     def on_event(self, event):
@@ -313,12 +315,8 @@ class MousePosWidget(Widget):
     def get_mouse_line(self):
         if not self.terminal:
             raise BearException('MousePosWidget is not connected to a terminal')
-        x = str(self.terminal.check_state('TK_MOUSE_X'))
-        if len(x) < 3:
-            x = '0' * (3-len(x)) + x
-        y = str(self.terminal.check_state('TK_MOUSE_Y'))
-        if len(y) < 3:
-            y = '0' * (3 - len(y)) + y
+        x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
+        y = str(self.terminal.check_state('TK_MOUSE_Y')).rjust(3, '0')
         return x + 'x' + y
         
 
