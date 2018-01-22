@@ -351,7 +351,6 @@ class SimpleAnimationWidget(Widget):
         if event.event_type == 'tick':
             self.have_waited += event.event_value
             if self.have_waited >= self.frame_time:
-                print(self.have_waited)
                 self.running_index += 1
                 if self.running_index >= len(self.frames):
                     self.running_index = 0

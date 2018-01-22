@@ -177,7 +177,7 @@ class BearTerminal:
         :return:
         """
         terminal.open()
-        terminal.set('font: ./cp437_12x12.png, size=12x12')
+        terminal.set('font: ./cp437_12x12.png, size=12x12, codepage=437')
         if self.outstring:
             terminal.set(self.outstring)
         self.refresh()
