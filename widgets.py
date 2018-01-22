@@ -34,13 +34,24 @@ class Widget:
         self.chars = chars
         self.colors = colors
         # A widget may want to know about the terminal it's attached to
-        self.terminal = None
+        self._terminal = None
     
     def on_event(self, event):
         # Root widget does not raise anything here, because Widget() can be
         # erroneously subscribed to a queue. While useless, that's not really a
         # fatal error.
         pass
+    
+    @property
+    def terminal(self):
+        return self._terminal
+    
+    @terminal.setter
+    def terminal(self, value):
+        if not isinstance(value, BearTerminal):
+            raise BearException('Only a BearTerminal can be set as ' +
+                                'Widget.terminal')
+        self._terminal = value
 
 
 class Layout(Widget):
