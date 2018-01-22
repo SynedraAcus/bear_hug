@@ -351,3 +351,25 @@ class XpLoader(ASCIILoader):
         back_b = int(base64.b16encode(cell_string[offset:offset + 1]), 16)
         offset += 1
         return char, color
+
+
+class Atlas:
+    """
+    An image atlas.
+    
+    An instance of this class accepts a Loader instance and a path to the JSON
+    file. The latter is parsed immediately.
+    """
+    def __init__(self, loader, json):
+        self.loader = loader
+        # A dict of {name: (x, y, xsize, ysize)}
+        self.elements = {}
+        self.json = json
+        
+    def get_element(self, name):
+        """
+        Return an element with a given name
+        :param name:
+        :return:
+        """
+        return self.loader.get_image_region(*self.elements[name])
