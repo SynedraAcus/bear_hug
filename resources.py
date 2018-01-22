@@ -6,6 +6,7 @@ from bear_utilities import BearException, copy_shape, rotate_list
 from copy import deepcopy
 import base64
 import gzip
+import json
 import os
 
 
@@ -360,11 +361,13 @@ class Atlas:
     An instance of this class accepts a Loader instance and a path to the JSON
     file. The latter is parsed immediately.
     """
-    def __init__(self, loader, json):
+    def __init__(self, loader, json_file):
         self.loader = loader
         # A dict of {name: (x, y, xsize, ysize)}
         self.elements = {}
-        self.json = json
+        for item in json.load(open(json_file)):
+            self.elements[item['name']] = (item['x'], item['y'],
+                                        item['xsize'], item['ysize'])
         
     def get_element(self, name):
         """

@@ -3,12 +3,11 @@
 # Manual test for bearhug. Shows some basic stuff using bear_hug library
 
 import random
-from copy import deepcopy
 
 from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
-from resources import TxtLoader, XpLoader
+from resources import Atlas, TxtLoader, XpLoader
 from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
     MousePosWidget
 
@@ -51,10 +50,9 @@ class FireworkBox(Layout):
     """
     A box that can add and remove fireworks on keypress
     """
-    def __init__(self, chars, colors, dispatcher, loop):
+    def __init__(self, chars, colors, dispatcher):
         super().__init__(chars, colors)
         self.dispatcher = dispatcher
-        self.loop = loop
         self.fireworks = []
         self.fps = 30
         
@@ -89,49 +87,65 @@ class FireworkBox(Layout):
                 self.remove_firework()
             elif event.event_value == 'TK_RIGHT':
                 self.add_firework()
-            # Changing FPS
-            elif event.event_value == 'TK_UP':
-                self.loop.fps = self.loop.fps + 5
-            elif event.event_value == 'TK_DOWN':
-                self.loop.fps -= 5
+                
+
+class DevMonitor(Layout):
+    """
+    A monitor that shows FPS and mouse position
+    Doesn't do any tracking by itself
+    """
+    def __init__(self, chars, colors, dispatcher):
+        super().__init__(chars, colors)
+        counter = FPSCounter()
+        dispatcher.register_listener(counter, 'tick')
+        self.add_child(counter, (2, 4))
+        # Have to remember mouser for terminal setter
+        self.mouser = MousePosWidget()
+        dispatcher.register_listener(self.mouser, ['tick', 'misc_input'])
+        self.add_child(self.mouser, (2, 7))
+        
+    @property
+    def terminal(self):
+        return self._terminal
+    
+    @terminal.setter
+    def terminal(self, value):
+        self.mouser.terminal = value
+        self._terminal = value
 
 
 t = BearTerminal(size='50x45', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
-# Setting up a layout for FPS counter
-c = [['-', '-', '-', '-', '-'],
-     ['|', '.', '.', '.', '|'],
-     ['-', '-', '-', '-', '-']]
-layout = Layout(c, copy_shape(c, 'green'))
-counter = FPSCounter()
-layout.add_child(counter, (1, 1))
-dispatcher.register_listener(counter, 'tick')
-dispatcher.register_listener(layout, ['service', 'tick'])
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
-mouser = MousePosWidget()
-dispatcher.register_listener(mouser, ['tick', 'misc_input'])
+
 # Fireworks box
-# Remember dispatcher to subscribe children
-box = FireworkBox([['.' for x in range(50)] for x in range(15)],
-                  [['gray' for x in range(50)] for x in range(15)],
-                  dispatcher, loop)
+box = FireworkBox([['.' for x in range(38)] for x in range(10)],
+                  [['gray' for x in range(38)] for x in range(10)],
+                  dispatcher)
 dispatcher.register_listener(box, ['key_down', 'service'])
+
 # A tank, TXTLoader test
 loader = TxtLoader('tank.txt')
 tank1 = Widget(*loader.get_image_region(0, 0, 5, 6))
 tank2 = Widget(*loader.get_image_region(6, 0, 5, 6))
-# Tree and lamp, XPLoader test
-xploader = XpLoader('tree_lamp.xp')
+
+# XPLoader tests
 # A tree without layer2 apples
+xploader = XpLoader('tree_lamp.xp')
 tree2 = Widget(*xploader.get_layer_region(0, 0, 1, 6, 8))
 # Multilayered tree and single-layered lamp
 tree = Widget(*xploader.get_image_region(0, 1, 6, 8))
 lamp = Widget(*xploader.get_image_region(7, 1, 7, 8))
+
+# Monitor, with BG loaded from XP atlas and widgets added in monitor.__init__
+atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
+monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
+dispatcher.register_listener(monitor, ['tick', 'service'])
+
 t.start()
-t.add_widget(layout, pos=(1, 1), layer=0)
-t.add_widget(mouser, pos=(1, 5), layer=5)
-t.add_widget(box, (0, 30), layer=1)
+t.add_widget(monitor, pos=(0, 35), layer=5)
+t.add_widget(box, (12, 35), layer=1)
 t.add_widget(tank2, (15, 10), layer=3)
 t.add_widget(tank1, (20, 23), layer=3)
 t.add_widget(tree, (5, 5), layer=2)
