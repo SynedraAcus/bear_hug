@@ -5,5 +5,54 @@
     "y": 0,
     "xsize": 12,
     "ysize": 10
+  },
+  {
+    "name": "cop",
+    "x": 12,
+    "y": 0,
+    "xsize": 13,
+    "ysize": 17
+  },
+  {
+    "name": "nunchaku_punk",
+    "x": 25,
+    "y": 0,
+    "xsize": 10,
+    "ysize": 17
+  },
+  {
+    "name": "bottle_punk",
+    "x": 35,
+    "y": 0,
+    "xsize": 10,
+    "ysize": 17
+  },
+  {
+    "name": "barrel_1",
+    "x": 0,
+    "y": 10,
+    "xsize": 6,
+    "ysize": 9
+  },
+  {
+    "name": "barrel_2",
+    "x": 0,
+    "y": 20,
+    "xsize": 6,
+    "ysize": 9
+  },
+  {
+    "name": "shot",
+    "x": 6,
+    "y": 10,
+    "xsize": 2,
+    "ysize": 3
+  },
+  {
+    "name": "bullet",
+    "x": 8,
+    "y": 10,
+    "xsize": 1,
+    "ysize": 2
   }
 ]
