@@ -329,8 +329,42 @@ class MousePosWidget(Widget):
         x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
         y = str(self.terminal.check_state('TK_MOUSE_Y')).rjust(3, '0')
         return x + 'x' + y
+ 
+ 
+class SimpleAnimationWidget(Widget):
+    """
+    A simple animated widget that cycles through the frames.
+    
+    Accepts two parameters on creation:
+    `frames`: an iterable of (chars, colors) tuples. These should all be the
+    same size
+    `fps`: frames per second.
+    """
+    def __init__(self, frames, fps):
+        super().__init__(*frames[0])
+        self.frames = frames
+        self.frame_time = 1/fps
+        self.running_index = 0
+        self.have_waited = 0
         
-
+    def on_event(self, event):
+        if event.event_type == 'tick':
+            self.have_waited += event.event_value
+            if self.have_waited >= self.frame_time:
+                print(self.have_waited)
+                self.running_index += 1
+                if self.running_index >= len(self.frames):
+                    self.running_index = 0
+                self.chars = self.frames[self.running_index][0]
+                self.colors = self.frames[self.running_index][1]
+                self.have_waited = 0
+        elif self.terminal and event.event_type == 'service' \
+                           and event.event_value == 'tick_over':
+            # This widget is connected to the terminal directly and must update
+            # itself without a layout
+            self.terminal.update_widget(self)
+  
+    
 # Listeners
 class Listener:
     """

@@ -9,7 +9,7 @@ from bear_utilities import copy_shape
 from event import BearEventDispatcher
 from resources import Atlas, TxtLoader, XpLoader
 from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
-    MousePosWidget
+    MousePosWidget, SimpleAnimationWidget
 
 
 class Firework(Widget):
@@ -143,12 +143,16 @@ atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
 
+# Barrel, an animation test
+barrel = SimpleAnimationWidget((atlas.get_element('barrel_1'),
+                                atlas.get_element('barrel_2')), 2)
+dispatcher.register_listener(barrel, ['tick', 'service'])
 t.start()
 t.add_widget(monitor, pos=(0, 35), layer=5)
 t.add_widget(box, (12, 35), layer=1)
 t.add_widget(tank2, (15, 10), layer=3)
 t.add_widget(tank1, (20, 23), layer=3)
-t.add_widget(tree, (5, 5), layer=2)
+t.add_widget(barrel, (5, 5), layer=2)
 t.add_widget(tree2, (40, 12), layer=2)
 t.add_widget(lamp, (32, 3), layer=2)
 loop.run()
