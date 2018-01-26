@@ -3,7 +3,7 @@ Various useful Widget and Listener classes
 """
 
 from bear_hug import BearTerminal
-from bear_utilities import shapes_equal, copy_shape, BearException, \
+from bear_utilities import shapes_equal, blit, copy_shape, BearException, \
     BearLayoutException
 from collections import deque
 from event import BearEvent
@@ -81,6 +81,7 @@ class Widget:
         elif axis in ('y', 'vertical'):
             self.chars = self.chars[::-1]
             self.colors = self.colors[::-1]
+
 
 class Layout(Widget):
     """
@@ -232,7 +233,11 @@ class Layout(Widget):
         self_pos = self.terminal.widget_locations(self).pos
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
         
-        
+
+# Functional widgets. Please note that these include no decoration, BG or
+# anything else. Ie Label is just a chunk of text on the screen, FPSCounter and
+# MousePosWidget are just the numbers that change. For the more complex visuals,
+# embed these into a Layout with the preferred BG
 class Label(Widget):
     """
     A widget that displays text.
@@ -243,7 +248,10 @@ class Label(Widget):
     or 'center'. Default 'left'.
     :param color: bearlibterminal-compatible color. Default 'white'
     :param width: text area width. Defaults to the length of the longest
-    substring in `text`
+    substring in `text`.
+
+    Label's text can be edited at any time by setting label.text property. Note
+    that it overwrites any changes to `self.chars` and `self.colors`
     """
     
     def __init__(self, text,
@@ -251,6 +259,10 @@ class Label(Widget):
         chars = Label._generate_chars(text, width, just)
         colors = copy_shape(chars, color)
         super().__init__(chars, colors)
+        self.color = color
+        self.just = just
+        # Bypassing setter, because I need to actually create a field
+        self._text = text
     
     @classmethod
     def _generate_chars(cls, text, width, just):
@@ -280,6 +292,23 @@ class Label(Widget):
         if not width:
             width = max(len(x) for x in lines)
         return [list(justify(x, width, just)) for x in lines]
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        if not self._text:
+            self._text = value
+        else:
+            # While Label is not resized, there is no need to edit its colors
+            chars = copy_shape(self.chars, ' ')
+            self.chars = blit(chars, self._generate_chars(value,
+                                                          len(self.chars[0]),
+                                                          self.just),
+                              0, 0)
+            self._text = value
 
 
 class FPSCounter(Widget):

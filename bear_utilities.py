@@ -2,7 +2,7 @@
 A collection of random functions useful for bear_hug
 """
 
-from copy import copy
+from copy import deepcopy
 
 def shapes_equal(a, b):
     """
@@ -87,6 +87,23 @@ def has_values(l):
             if value:
                 return True
     return False
+
+
+def blit(l1, l2, x, y):
+    """
+    Blits l2 to l1 at a given pos, overwriting the original values
+    Returns the blitted version of l1
+    :param l1:
+    :param l2:
+    :return:
+    """
+    if x + len(l2[0]) > len(l1[0]) or y + len(l2) > len(l1):
+        raise ValueError('Cannot blit the list where it won\'t fit')
+    r = deepcopy(l1)
+    for y_offset in range(len(l2)):
+        for x_offset in range(len(l2[0])):
+            r[y+y_offset][x+x_offset] = l2[y_offset][x_offset]
+    return r
 
 
 #  Exceptions were moved here to avoid circular imports

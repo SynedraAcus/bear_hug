@@ -53,6 +53,8 @@ class FireworkBox(Layout):
     def __init__(self, chars, colors, dispatcher):
         super().__init__(chars, colors)
         self.dispatcher = dispatcher
+        self.fireworks_count = Label('Fireworks: 000', color='red')
+        self.add_child(self.fireworks_count, (15, 0))
         self.fireworks = []
         self.fps = 30
         
@@ -68,12 +70,16 @@ class FireworkBox(Layout):
         self.dispatcher.register_listener(f, 'tick')
         self.fireworks.append(f)
         self.add_child(f, pos)
+        self.fireworks_count.text = 'Fireworks: {0}'.format(
+                        str(len(self.fireworks)).rjust(3, '0'))
 
     def remove_firework(self):
         if self.fireworks:
             self.dispatcher.unregister_listener(self.fireworks[-1])
             self.remove_child(self.fireworks[-1])
             del(self.fireworks[-1])
+        self.fireworks_count.text = 'Fireworks: {0}'.format(
+            str(len(self.fireworks)).rjust(3, '0'))
     
     def on_event(self, event):
         super().on_event(event)
