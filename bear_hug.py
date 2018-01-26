@@ -393,8 +393,13 @@ class BearLoop:
             t = time.time() - self.last_time
             self.last_time = time.time()
             self.run_iteration(t)
-            if time.time() - self.last_time < self.frame_time:
+            sleep_time = self.frame_time - time.time() + self.last_time
+            if sleep_time > 0.05*self.frame_time:
                 # If frame was finished early, wait for it
+                # But only if there is enough spare time to make it worthwhile.
+                # Otherwise, on a laggy system sleep_time may be positive when
+                # the `if` check runs, but negative by the time `sleep` is
+                # called, causing a crash.
                 time.sleep(self.frame_time - time.time() + self.last_time)
         # When the loop stops, it closes the terminal. Everyone is expected to
         # have caught the shutdown service event
