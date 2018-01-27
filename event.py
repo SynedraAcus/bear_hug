@@ -38,6 +38,7 @@ class BearEventDispatcher:
                             'key_up', # Key or mouse button up
                             'misc_input', # Other input, eg MOUSE_MOVE or CLOSE
                             'service', # To do with queue or engine in general
+                            'ecs_create', # A creation of entity
                             'ecs_move', # Movement of entities
                             'ecs_add', # Addition of entity to ECSLayout
                             'ecs_remove' # Removal of entites from ECSLayout

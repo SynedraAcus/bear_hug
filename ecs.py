@@ -4,10 +4,18 @@ Entity-component system.
 Entities are just the sets of components, nothing more. The major way for them
 to be used should be components calling something like
 `self.owner.that_other_component.do_stuff` or emitting `ecs_*` events.
+
+The creation of a new Entity is announced by the following event:
+`BearEvent(event_type='ecs_create', event_value=entity)`
+
+It is the only event type that uses the actual entity object, not its ID, as the
+event_value. When this event is emitted, the entity should be ready to work,
+in particular, all its components should be subscribed to the appropriate events
 """
 
-from bear_utilities import BearECSException
+from bear_utilities import BearECSException, BearException
 from widgets import Widget, Listener
+from event import BearEvent, BearEventDispatcher
 
 
 class Entity:
@@ -49,7 +57,7 @@ class Entity:
             raise BearECSException('Cannot remove component ' +
                           '{} that Entity doesn\'t have'.format(component_name))
         
-
+    
 class Component(Listener):
     """
     A root component class.
@@ -82,13 +90,10 @@ class Component(Listener):
     def on_event(self, event):
         """
         Component's event callback.
-        
-        Events are passed to all components of the Entity by WidgetComponent.
-        Thus, for each entity, the range of events it can emit and react to is
-        limited by what (if anything) its WidgetComponent was subscribed to.
         :param event:
         :return:
         """
+        pass
 
 
 class WidgetComponent(Component):
@@ -101,12 +106,10 @@ class WidgetComponent(Component):
     `on_event` method simply passes the events to the Widget
     """
     
-    def __init__(self, widget, **kwargs):
-        if 'name' in kwargs:
-            raise BearECSException('Cannot pass name to WidgetComponent')
+    def __init__(self, widget, owner=None):
         if not isinstance(widget, Widget):
             raise TypeError('A widget is not actually a Widget')
-        super().__init__(self, name='widget', **kwargs)
+        super().__init__(name='widget', owner=owner)
         self.widget = widget
         
     def on_event(self, event):
