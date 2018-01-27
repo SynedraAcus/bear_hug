@@ -232,7 +232,45 @@ class Layout(Widget):
         """
         self_pos = self.terminal.widget_locations(self).pos
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
-        
+
+
+class SimpleAnimationWidget(Widget):
+    """
+    A simple animated widget that cycles through the frames.
+
+    Accepts two parameters on creation:
+    `frames`: an iterable of (chars, colors) tuples. These should all be the
+    same size
+    `fps`: frames per second.
+    """
+    
+    def __init__(self, frames, fps):
+        super().__init__(*frames[0])
+        if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
+                or not all(
+            (shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
+            raise BearException('Frames should be equal size')
+        self.frames = frames
+        self.frame_time = 1 / fps
+        self.running_index = 0
+        self.have_waited = 0
+    
+    def on_event(self, event):
+        if event.event_type == 'tick':
+            self.have_waited += event.event_value
+            if self.have_waited >= self.frame_time:
+                self.running_index += 1
+                if self.running_index >= len(self.frames):
+                    self.running_index = 0
+                self.chars = self.frames[self.running_index][0]
+                self.colors = self.frames[self.running_index][1]
+                self.have_waited = 0
+        elif self.terminal and event.event_type == 'service' \
+                and event.event_value == 'tick_over':
+            # This widget is connected to the terminal directly and must update
+            # itself without a layout
+            self.terminal.update_widget(self)
+            
 
 # Functional widgets. Please note that these include no decoration, BG or
 # anything else. Ie Label is just a chunk of text on the screen, FPSCounter and
@@ -319,7 +357,9 @@ class Label(Widget):
                                                           self.just),
                               0, 0)
             self._text = value
-            if self.terminal:
+            # MousePosWidgets (a child of Label) may have self.terminal set
+            # despite not being connected to the terminal directly
+            if self.terminal and self in self.terminal._widget_pointers:
                 self.terminal.update_widget(self)
 
     @property
@@ -334,7 +374,7 @@ class Label(Widget):
             self.terminal.update_widget(self)
         
 
-class FPSCounter(Widget):
+class FPSCounter(Label):
     """
     A simple widget that measures FPS.
     Actually just prints 1/(average runtime over the last 100 ticks in seconds),
@@ -343,19 +383,15 @@ class FPSCounter(Widget):
     seems like the game takes a second or two to reach the target FPS -- it just
     seems that way.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.samples_deque = deque(maxlen=100)
-        # Something to be dispayed on th 1st frame. 30 is a reasonable default
-        chars = [list(str(100))]
-        color = copy_shape(chars, 'white')
-        super().__init__(chars, color, *args, **kwargs)
+        super().__init__('030', **kwargs)
     
     def _update_self(self):
         fps = str(round(len(self.samples_deque) /
                             sum(self.samples_deque)))
         fps = fps.rjust(3, '0')
-        self.chars = [list(fps)]
-        self.colors = copy_shape(self.chars, 'white')
+        self.text = fps
     
     def on_event(self, event):
         # Update FPS estimate
@@ -364,11 +400,9 @@ class FPSCounter(Widget):
             self._update_self()
             if self.terminal:
                 self.terminal.update_widget(self)
-        elif event.event_type == 'input':
-            print(event.event_value)
 
 
-class MousePosWidget(Widget):
+class MousePosWidget(Label):
     """
     A simple widget akin to FPSCounter that listens to TK_MOUSE_MOVE events.
     
@@ -378,29 +412,14 @@ class MousePosWidget(Widget):
     gets its first `tick` event.
     """
     
-    def __init__(self, *args, **kwargs):
-        chars = [[' ' for x in range(7)]]
-        colors = copy_shape(chars, 'white')
-        super().__init__(chars, colors, *args, **kwargs)
-        self.mouse_line = ''
+    def __init__(self, **kwargs):
+        super().__init__(text='000x000', **kwargs)
         
     def on_event(self, event):
-        if event.event_type == 'tick':
-            # Only used at the very first tick. Without it, the widget would
-            # display no position at all until the first 'TK_MOUSE_MOVE' event
-            if not self.mouse_line:
-                self.mouse_line = self.get_mouse_line()
-                self._update_chars()
-        elif event.event_type == 'misc_input' and \
+        if event.event_type == 'misc_input' and \
                      event.event_value == 'TK_MOUSE_MOVE':
-            self.mouse_line = self.get_mouse_line()
-            self._update_chars()
-            
-    def _update_chars(self):
-        self.chars = [list(self.mouse_line)]
-        if self in self.terminal.widget_locations:
-            # widget_locations is set iff the widget is connected to a terminal
-            # directly
+            self.text = self.get_mouse_line()
+        if self in self.terminal._widget_pointers:
             self.terminal.update_widget(self)
 
     def get_mouse_line(self):
@@ -409,42 +428,6 @@ class MousePosWidget(Widget):
         x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
         y = str(self.terminal.check_state('TK_MOUSE_Y')).rjust(3, '0')
         return x + 'x' + y
- 
- 
-class SimpleAnimationWidget(Widget):
-    """
-    A simple animated widget that cycles through the frames.
-    
-    Accepts two parameters on creation:
-    `frames`: an iterable of (chars, colors) tuples. These should all be the
-    same size
-    `fps`: frames per second.
-    """
-    def __init__(self, frames, fps):
-        super().__init__(*frames[0])
-        if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
-             or not all((shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
-            raise BearException('Frames should be equal size')
-        self.frames = frames
-        self.frame_time = 1/fps
-        self.running_index = 0
-        self.have_waited = 0
-        
-    def on_event(self, event):
-        if event.event_type == 'tick':
-            self.have_waited += event.event_value
-            if self.have_waited >= self.frame_time:
-                self.running_index += 1
-                if self.running_index >= len(self.frames):
-                    self.running_index = 0
-                self.chars = self.frames[self.running_index][0]
-                self.colors = self.frames[self.running_index][1]
-                self.have_waited = 0
-        elif self.terminal and event.event_type == 'service' \
-                           and event.event_value == 'tick_over':
-            # This widget is connected to the terminal directly and must update
-            # itself without a layout
-            self.terminal.update_widget(self)
   
     
 # Listeners
