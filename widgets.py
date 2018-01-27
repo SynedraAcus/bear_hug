@@ -120,7 +120,7 @@ class Layout(Widget):
         self.add_child(w, pos=(0, 0))
         
     # Operations on children
-    def add_child(self, child, pos):
+    def add_child(self, child, pos, skip_checks = False):
         """
         Add a widget as a child at a given (relative) position.
         The child has to be a Widget or a Widget subclass that haven't yet been
@@ -129,19 +129,19 @@ class Layout(Widget):
         :param child:
         :return:
         """
-        if not isinstance(child, Widget):
-            raise BearLayoutException('Cannot add non-Widget to a Layout')
-        if child in self.children:
-            raise BearLayoutException('Cannot add the same widget to layout twice')
-        if len(child.chars) > len(self.chars) or \
-                len(child.chars[0]) > len(self.chars[0]):
-            raise BearLayoutException('Cannot add child that is bigger than a Layout')
-        if len(child.chars) + pos[1] > len(self.chars) or \
-                len(child.chars[0]) + pos[0] > len(self.chars[0]):
-            print(pos)
-            raise BearLayoutException('Child won\'t fit at this position')
-        if child is self:
-            raise BearLayoutException('Cannot add Layout as its own child')
+        if not skip_checks:
+            if not isinstance(child, Widget):
+                raise BearLayoutException('Cannot add non-Widget to a Layout')
+            if child in self.children:
+                raise BearLayoutException('Cannot add the same widget to layout twice')
+            if len(child.chars) > len(self.chars) or \
+                    len(child.chars[0]) > len(self.chars[0]):
+                raise BearLayoutException('Cannot add child that is bigger than a Layout')
+            if len(child.chars) + pos[1] > len(self.chars) or \
+                    len(child.chars[0]) + pos[0] > len(self.chars[0]):
+                raise BearLayoutException('Child won\'t fit at this position')
+            if child is self:
+                raise BearLayoutException('Cannot add Layout as its own child')
         self.children.append(child)
         self.child_locations[child] = pos
         for y in range(len(child.chars)):
@@ -171,7 +171,7 @@ class Layout(Widget):
     
     def move_child(self, child, new_pos):
         self.remove_child(child, remove_completely=False)
-        self.add_child(child, pos=new_pos)
+        self.add_child(child, pos=new_pos, skip_checks=True)
     
     # BG's chars and colors are not meant to be set directly
     @property
