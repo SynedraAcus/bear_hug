@@ -46,17 +46,13 @@ class WalkerComponent(PositionComponent):
         if event.event_type == 'key_down':
             moved = False
             if event.event_value in ('TK_D', 'TK_RIGHT'):
-                self.x += 1
-                moved = True
+                self.move(self.x + 1, self.y)
             elif event.event_value in ('TK_A', 'TK_LEFT'):
-                self.x -= 1
-                moved = True
+                self.move(self.x - 1, self.y)
             elif event.event_value in ('TK_S', 'TK_DOWN'):
-                self.y += 1
-                moved = True
+                self.relative_move(0, 1)
             elif event.event_value in ('TK_W', 'TK_UP'):
-                self.y -= 1
-                moved = True
+                self.relative_move(0, 1)
             elif event.event_value in ('TK_SPACE'):
                 self.owner.spawner.create_entity()
             if moved:

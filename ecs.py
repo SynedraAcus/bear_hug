@@ -129,11 +129,48 @@ class PositionComponent(Component):
     """
     def __init__(self, dispatcher, x=0, y=0, vx=0, vy=0, owner=None):
         super().__init__(dispatcher, name='position', owner=owner)
-        self.x = x
-        self.y = y
+        self._x = x
+        self._y = y
         self.vx = vx
         self.vy = vy
         
+    @property
+    def x(self):
+        return self._x
+
+    @property
+    def y(self):
+        return self._y
+    
+    def move(self, x, y, emit_event=True):
+        """
+        Move the Entity to a specified position.
+        :param x: x
+        :param y: y
+        :param emit_event: Whether to emit an 'esc_move' event. There are a few
+        cases (ie setting the coordinates after the component is created, but
+        before the entity is added to the terminal) where this is undesirable.
+        :return:
+        """
+        self._x = x
+        self._y = y
+        if emit_event:
+            self.dispatcher.add_event(BearEvent(event_type='ecs_move',
+                                                event_value=(self.owner.id,
+                                                             self._x,
+                                                             self._y)))
+
+    def relative_move(self, dx, dy, emit_event=True):
+        """
+        Move the Entity to a specified position.
+        :param x: x
+        :param y: y
+        :param emit_event: Whether to emit an 'esc_move' event. There are a few
+        cases (ie setting the coordinates after the component is created, but
+        before the entity is added to the terminal) where this is undesirable.
+        :return:
+        """
+        self.move(self.x+dx, self.y+dy, emit_event=emit_event)
         
     def on_event(self, event):
         # TODO: process vx and vy
@@ -164,8 +201,9 @@ class SpawnerComponent(Component):
             component.dispatcher = self.dispatcher
         entity.id += str(self.id_count)
         self.id_count += 1
-        entity.position.x = self.owner.position.x + self.relative_pos[0]
-        entity.position.y = self.owner.position.y + self.relative_pos[1]
+        entity.position.move(self.owner.position.x + self.relative_pos[0],
+                             self.owner.position.y + self.relative_pos[1],
+                             emit_event=False)
         self.dispatcher.add_event(BearEvent(event_type='ecs_create',
                                             event_value=entity))
         self.dispatcher.add_event(BearEvent(event_type='ecs_add',
