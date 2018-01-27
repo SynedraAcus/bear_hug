@@ -12,11 +12,13 @@ Curses analogue. `Bearlibterminal`, which is `bear_hug`'s backend, does
 not rely on the user console, instead building its own SDL window. It
 means the end result looks the same whether the player of
 `bearlibterminal`/`bear_hug` game runs it on any Linux flavor, MacOS or
-Windows, plus you get some cool tricks from `bearlibterminal` like
-overlapping characters (some other cool tricks, like shifting character
-within its cell, are not supported by `bear_hug` and won't be unless
-pull-requested). But it also means that the system that cannot run SDL
-cannot run `bearlibterminal` games.
+Windows. In addition, you get some cool tricks from `bearlibterminal`
+like overlapping characters (some other cool tricks, like shifting
+character within its cell, are not supported by `bear_hug` and won't be
+unless pull-requested).
+
+But it also means that any system that cannot run SDL cannot run
+`bearlibterminal` games.
 
 ### What's there now?
 A loop and event system, a bunch of Widget prototypes, object-oriented
