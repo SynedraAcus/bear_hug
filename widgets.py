@@ -1,5 +1,8 @@
 """
 Various useful Widget and Listener classes
+These widgets and listeners are usable outside the ECS and should be sufficient
+for simpler games and apps. However, for the sake of clearer architecture,
+entities are recommended.
 """
 
 from bear_hug import BearTerminal
@@ -234,6 +237,7 @@ class Layout(Widget):
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
 
 
+# Animations and other complex decorative Widgets
 class SimpleAnimationWidget(Widget):
     """
     A simple animated widget that cycles through the frames.
@@ -433,8 +437,8 @@ class MousePosWidget(Label):
 # Listeners
 class Listener:
     """
-    A base class for the things that need to know about terminal and receive
-    events from the queue, but are not displayed on screen.
+    A base class for the things that need to interact with the queue (and maybe
+    the terminal), but aren't widgets.
     """
     def __init__(self):
         self.terminal = None

@@ -1,6 +1,7 @@
 #! /usr/bin/env python3.6
 
-# Manual test for bearhug. Shows some basic stuff using bear_hug library
+# Manual test for bearhug. Tests addition and removal of various widgets,
+# loading images from TXT and XP, loop and animation system. Does not use ECS.
 
 import random
 

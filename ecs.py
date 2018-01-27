@@ -1,8 +1,13 @@
 """
 Entity-component system.
+
+Entities are just the sets of components, nothing more. The major way for them
+to be used should be components calling something like
+`self.owner.that_other_component.do_stuff` or emitting `ecs_*` events.
 """
 
 from bear_utilities import BearECSException
+from widgets import Widget, Listener
 
 
 class Entity:
@@ -10,8 +15,9 @@ class Entity:
     A root entity class.
     """
     
-    def __init__(self, components=[]):
+    def __init__(self, id='Default ID', components=[]):
         self.components = []
+        self.id = id
         for component in components:
             self.add_component(component)
         
@@ -44,12 +50,16 @@ class Entity:
                           '{} that Entity doesn\'t have'.format(component_name))
         
 
-class Component:
+class Component(Listener):
     """
     A root component class.
     
     Component name is expected to be the same between all components of the same
     class.
+    
+    Component inherits from Listener and is therefore able to receive and return
+    BearEvents. Of course, it needs the correct subscriptions to actually get
+    them.
     """
     def __init__(self, name='Root component', owner=None):
         if not name:
@@ -68,3 +78,57 @@ class Component:
         :return:
         """
         owner.add_component(self)
+        
+    def on_event(self, event):
+        """
+        Component's event callback.
+        
+        Events are passed to all components of the Entity by WidgetComponent.
+        Thus, for each entity, the range of events it can emit and react to is
+        limited by what (if anything) its WidgetComponent was subscribed to.
+        :param event:
+        :return:
+        """
+
+
+class WidgetComponent(Component):
+    """
+    Widget as a component.
+    
+    This component is responsible for drawing stuff on the screen. Since Widgets
+    can accept events and it is sometimes reasonable to keep some event logic in
+    the Widget instead of Components (ie to keep animation running), its
+    `on_event` method simply passes the events to the Widget
+    """
+    
+    def __init__(self, widget, **kwargs):
+        if 'name' in kwargs:
+            raise BearECSException('Cannot pass name to WidgetComponent')
+        if not isinstance(widget, Widget):
+            raise TypeError('A widget is not actually a Widget')
+        super().__init__(self, name='widget', **kwargs)
+        self.widget = widget
+        
+    def on_event(self, event):
+        self.widget.on_event(event)
+        
+        
+class PositionComponent(Component):
+    """
+    A component responsible for positioning Widget on ECSLayout.
+    
+    It has x and y coordinates, as well as vx and vy speed components.
+    Coordinates are given in tiles and speed is in tiles per second.
+    """
+    def __init__(self, x=0, y=0, vx=0, vy=0, owner=None):
+        super().__init__(name='position', owner=owner)
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
+        
+    def on_event(self, event):
+        # TODO: process vx and vy
+        pass
+        
+
