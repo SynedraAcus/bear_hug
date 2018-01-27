@@ -117,3 +117,7 @@ class BearLoopException(BearException):
 
 class BearLayoutException(BearException):
     pass
+
+
+class BearECSException(BearException):
+    pass
