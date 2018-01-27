@@ -71,12 +71,12 @@ def create_bullet():
     :return:
     """
     # TODO: redraw bullet to avoid undrawn char
-    atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
+    # atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
     bullet_entity = Entity(id='bullet')
-    widget = Widget(*atlas.get_element('bullet'))
+    widget = Widget([['-', '*']], [['red', 'red']])
     widget_component = WidgetComponent(None, widget, owner=bullet_entity)
     dispatcher.register_listener(widget_component, 'tick')
-    position = PositionComponent(None, vx=15, vy=0, owner=bullet_entity)
+    position = PositionComponent(None, vx=50, vy=0, owner=bullet_entity)
     dispatcher.register_listener(position, 'tick')
     return bullet_entity
     
@@ -107,7 +107,7 @@ dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
-chars = [['.' for x in range(85)] for y in range(50)]
+chars = [[' ' for x in range(85)] for y in range(50)]
 colors = copy_shape(chars, 'gray')
 layout = ECSLayout(chars, colors)
 dispatcher.register_listener(layout, 'all')

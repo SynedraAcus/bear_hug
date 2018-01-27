@@ -36,6 +36,7 @@ class ECSLayout(Layout):
         super().__init__(chars, colors)
         self.entities = {}
         self.widgets = {}
+        self.need_redraw = False
     
     def add_entity(self, entity):
         """
@@ -61,16 +62,20 @@ class ECSLayout(Layout):
                     0 < y < len(self.chars):
                 return
             self.move_child(self.widgets[entity_id], (x, y))
+            self.need_redraw = True
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
+            self.need_redraw = True
         elif event.event_type == 'ecs_remove':
             self.remove_child(self.entities[event.event_value].widget)
+            self.need_redraw = True
         elif event.event_type == 'ecs_add':
             entity_id, x, y = event.event_value
             print('Drawing entity {}'.format(entity_id))
             self.add_child(self.widgets[entity_id], (x, y))
-        super().on_event(event)
-
-
-
-            
+            self.need_redraw = True
+        elif event.event_type == 'service' and event.event_value == 'tick_over'\
+                and self.need_redraw:
+            self._rebuild_self()
+            self.terminal.update_widget(self)
+            self.need_redraw = False
