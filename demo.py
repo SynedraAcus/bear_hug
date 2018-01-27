@@ -53,7 +53,8 @@ class FireworkBox(Layout):
     def __init__(self, chars, colors, dispatcher):
         super().__init__(chars, colors)
         self.dispatcher = dispatcher
-        self.fireworks_count = Label('Fireworks: 000', color='red', height=3)
+        self.fireworks_count = Label('Fireworks: 000', color='red',
+                                     width=20, height=3)
         self.add_child(self.fireworks_count, (15, 0))
         self.fireworks = []
         self.fps = 30

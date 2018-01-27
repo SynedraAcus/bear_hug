@@ -265,8 +265,8 @@ class Label(Widget):
         colors = copy_shape(chars, color)
         super().__init__(chars, colors)
         self.color = color
-        self.just = just
-        # Bypassing setter, because I need to actually create a field
+        # Bypassing setter, because I need to actually create fields
+        self._just = just
         self._text = text
     
     @classmethod
@@ -311,7 +311,7 @@ class Label(Widget):
         if not self._text:
             self._text = value
         else:
-            # While Label is not resized, there is no need to edit its colors
+            # Since Label is not resized, there is no need to edit its colors
             chars = copy_shape(self.chars, ' ')
             self.chars = blit(chars, self._generate_chars(value,
                                                           len(self.chars[0]),
@@ -319,7 +319,20 @@ class Label(Widget):
                                                           self.just),
                               0, 0)
             self._text = value
+            if self.terminal:
+                self.terminal.update_widget(self)
 
+    @property
+    def just(self):
+        return self._just
+    
+    @just.setter
+    def just(self, value):
+        self.chars = Label._generate_chars(self.text, len(self.chars[0]),
+                                           len(self.chars), just=value)
+        if self.terminal:
+            self.terminal.update_widget(self)
+        
 
 class FPSCounter(Widget):
     """
