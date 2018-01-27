@@ -5,7 +5,7 @@ An ECS test.
 """
 from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape
-from ecs import Entity, Component, WidgetComponent, PositionComponent
+from ecs import Entity, WidgetComponent, PositionComponent, SpawnerComponent
 from ecs_widgets import ECSLayout
 from event import BearEventDispatcher, BearEvent
 from resources import Atlas, XpLoader
@@ -57,26 +57,45 @@ class WalkerComponent(PositionComponent):
             elif event.event_value in ('TK_W', 'TK_UP'):
                 self.y -= 1
                 moved = True
+            elif event.event_value in ('TK_SPACE'):
+                self.owner.spawner.create_entity()
             if moved:
                 return BearEvent(event_type='ecs_move',
                                  event_value=(self.owner.id, self.x, self.y))
         super().on_event(event)
 
 
+def create_bullet():
+    """
+    Create a bullet
+    :return:
+    """
+    atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
+    bullet_entity = Entity(id='bullet')
+    widget = Widget(*atlas.get_element('bullet'))
+    widget_component = WidgetComponent(None, widget, owner=bullet_entity)
+    dispatcher.register_listener(widget_component, 'tick')
+    position = PositionComponent(None, owner=bullet_entity)
+    dispatcher.register_listener(position, 'tick')
+    return bullet_entity
+    
+
 def create_cop(atlas, dispatcher, x, y):
     """
-    Create a punk entity
+    Create a cop entity
     :param dispatcher:
     :return:
     """
     punk_entity = Entity(id='cop')
     widget = Widget(*atlas.get_element('cop'))
-    widget_component = WidgetComponent(widget)
+    widget_component = WidgetComponent(dispatcher, widget, owner=punk_entity)
     dispatcher.register_listener(widget_component, 'tick')
-    position_component = WalkerComponent(x=x, y=y)
+    position_component = WalkerComponent(dispatcher, x=x, y=y,
+                                         owner=punk_entity)
     dispatcher.register_listener(position_component, ['tick', 'key_down'])
-    punk_entity.add_component(widget_component)
-    punk_entity.add_component(position_component)
+    spawner = SpawnerComponent(dispatcher, create_bullet,
+                               relative_pos=(13, 4),
+                               owner=punk_entity)
     dispatcher.add_event(BearEvent(event_type='ecs_create',
                                    event_value=punk_entity))
     dispatcher.add_event(BearEvent(event_type='ecs_add',

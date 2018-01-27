@@ -69,23 +69,27 @@ class Component(Listener):
     BearEvents. Of course, it needs the correct subscriptions to actually get
     them.
     """
-    def __init__(self, name='Root component', owner=None):
+    def __init__(self, dispatcher, name='Root component', owner=None):
         if not name:
             raise BearECSException('Cannot create a component without a name')
+        self.dispatcher = dispatcher
         self.name = name
-        if owner:
-            self.set_owner(owner)
+        self.owner = None
+        self.set_owner(owner)
             
     def set_owner(self, owner):
         """
         Registers a component owner.
         
         This is only useful if the component is passed from one owner to
-        another.
+        another, or if the component is created with the `owner` argument.
         :param owner:
         :return:
         """
-        owner.add_component(self)
+        if owner:
+            if not isinstance(owner, Entity):
+                raise BearECSException('Only an Entity can be Component owner')
+            owner.add_component(self)
         
     def on_event(self, event):
         """
@@ -106,10 +110,10 @@ class WidgetComponent(Component):
     `on_event` method simply passes the events to the Widget
     """
     
-    def __init__(self, widget, owner=None):
+    def __init__(self, dispatcher, widget, owner=None):
         if not isinstance(widget, Widget):
             raise TypeError('A widget is not actually a Widget')
-        super().__init__(name='widget', owner=owner)
+        super().__init__(dispatcher=dispatcher, name='widget', owner=owner)
         self.widget = widget
         
     def on_event(self, event):
@@ -123,15 +127,48 @@ class PositionComponent(Component):
     It has x and y coordinates, as well as vx and vy speed components.
     Coordinates are given in tiles and speed is in tiles per second.
     """
-    def __init__(self, x=0, y=0, vx=0, vy=0, owner=None):
-        super().__init__(name='position', owner=owner)
+    def __init__(self, dispatcher, x=0, y=0, vx=0, vy=0, owner=None):
+        super().__init__(dispatcher, name='position', owner=owner)
         self.x = x
         self.y = y
         self.vx = vx
         self.vy = vy
         
+        
     def on_event(self, event):
         # TODO: process vx and vy
         pass
-        
 
+
+class SpawnerComponent(Component):
+    """
+    A component responsible for creating other entities. A current
+    implementation can produce only a single Entity type; this will be fixed
+    when entity factories are up and running.
+    
+    :param to_spawn: A callable that returns an Entity to be created. The entity
+    needs to have `widget` and `position` components.
+    :param relative_pos: a starting position of a spawned Entity, relative to
+    self.
+    """
+    # TODO: accept entity factories
+    def __init__(self, dispatcher, to_spawn, relative_pos=(0, 0), owner=None):
+        super().__init__(dispatcher, name='spawner', owner=owner)
+        self.to_spawn = to_spawn
+        self.relative_pos = relative_pos
+        self.id_count = 0
+        
+    def create_entity(self):
+        entity = self.to_spawn()
+        for component in (entity.__dict__[c] for c in entity.components):
+            component.dispatcher = self.dispatcher
+        entity.id += str(self.id_count)
+        self.id_count += 1
+        entity.position.x = self.owner.position.x + self.relative_pos[0]
+        entity.position.y = self.owner.position.y + self.relative_pos[1]
+        self.dispatcher.add_event(BearEvent(event_type='ecs_create',
+                                            event_value=entity))
+        self.dispatcher.add_event(BearEvent(event_type='ecs_add',
+                                            event_value=(entity.id,
+                                                         entity.position.x,
+                                                         entity.position.y)))
