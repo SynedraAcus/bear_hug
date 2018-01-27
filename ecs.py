@@ -132,7 +132,13 @@ class PositionComponent(Component):
         self._x = x
         self._y = y
         self.vx = vx
+        if self.vx:
+            self.x_delay = abs(1/self.vx)
+        self.x_waited = 0
         self.vy = vy
+        if self.vy:
+            self.y_delay = abs(1/self.vy)
+        self.y_waited = 0
         
     @property
     def x(self):
@@ -173,9 +179,24 @@ class PositionComponent(Component):
         self.move(self.x+dx, self.y+dy, emit_event=emit_event)
         
     def on_event(self, event):
-        # TODO: process vx and vy
-        pass
-
+        if event.event_type == 'tick':
+            # Move
+            if self.vx or self.vy:
+                self.x_waited += event.event_value
+                self.y_waited += event.event_value
+                if self.vx and self.x_waited > self.x_delay:
+                    new_x = self.x + 1 if self.vx > 0 else self.x - 1
+                    self.x_waited = 0
+                else:
+                    new_x = self.x
+                if self.vy and self.y_waited > self.y_delay:
+                    new_y = self.y + 1 if self.vy > 0 else self.y - 1
+                    self.y_waited = 0
+                else:
+                    new_y = self.y
+                if not self.x == new_x or not self.y == new_y:
+                    self.move(new_x, new_y)
+                
 
 class SpawnerComponent(Component):
     """

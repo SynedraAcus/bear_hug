@@ -52,7 +52,7 @@ class WalkerComponent(PositionComponent):
             elif event.event_value in ('TK_S', 'TK_DOWN'):
                 self.relative_move(0, 1)
             elif event.event_value in ('TK_W', 'TK_UP'):
-                self.relative_move(0, 1)
+                self.relative_move(0, -1)
             elif event.event_value in ('TK_SPACE'):
                 self.owner.spawner.create_entity()
             if moved:
@@ -66,12 +66,13 @@ def create_bullet():
     Create a bullet
     :return:
     """
+    # TODO: redraw bullet to avoid undrawn char
     atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
     bullet_entity = Entity(id='bullet')
     widget = Widget(*atlas.get_element('bullet'))
     widget_component = WidgetComponent(None, widget, owner=bullet_entity)
     dispatcher.register_listener(widget_component, 'tick')
-    position = PositionComponent(None, owner=bullet_entity)
+    position = PositionComponent(None, vx=5, vy=0, owner=bullet_entity)
     dispatcher.register_listener(position, 'tick')
     return bullet_entity
     
