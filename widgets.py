@@ -249,14 +249,19 @@ class Label(Widget):
     :param color: bearlibterminal-compatible color. Default 'white'
     :param width: text area width. Defaults to the length of the longest
     substring in `text`.
+    :param height: text area height. Defaults to the line count in `text`
 
     Label's text can be edited at any time by setting label.text property. Note
-    that it overwrites any changes to `self.chars` and `self.colors`
+    that it overwrites any changes to `self.chars` and `self.colors` made after
+    setting `self.text` the last time.
+    
+    Unlike text, Label's height and width cannot be changed. Set its height and
+    width to accomodate all possible inputs during Label creation.
     """
     
     def __init__(self, text,
-                 just='left', color='white', width=None):
-        chars = Label._generate_chars(text, width, just)
+                 just='left', color='white', width=None, height=None):
+        chars = Label._generate_chars(text, width, height, just)
         colors = copy_shape(chars, color)
         super().__init__(chars, colors)
         self.color = color
@@ -265,7 +270,7 @@ class Label(Widget):
         self._text = text
     
     @classmethod
-    def _generate_chars(cls, text, width, just):
+    def _generate_chars(cls, text, width, height, just):
         """
         Internal method that generates a justified char list for the Label
         :param text:
@@ -291,7 +296,11 @@ class Label(Widget):
         lines = text.split('\n')
         if not width:
             width = max(len(x) for x in lines)
-        return [list(justify(x, width, just)) for x in lines]
+        r = [list(justify(x, width, just)) for x in lines]
+        if height and len(r) < height:
+            for x in range(height - len(r)):
+                r.append([' ' for j in range(len(r[0]))])
+        return r
 
     @property
     def text(self):
@@ -306,6 +315,7 @@ class Label(Widget):
             chars = copy_shape(self.chars, ' ')
             self.chars = blit(chars, self._generate_chars(value,
                                                           len(self.chars[0]),
+                                                          len(self.chars),
                                                           self.just),
                               0, 0)
             self._text = value
