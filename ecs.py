@@ -115,9 +115,8 @@ class WidgetComponent(Component):
             raise TypeError('A widget is not actually a Widget')
         super().__init__(dispatcher=dispatcher, name='widget', owner=owner)
         self.widget = widget
-        
-    def on_event(self, event):
-        self.widget.on_event(event)
+        if self.dispatcher:
+            self.dispatcher.register_listener(self.widget, 'tick')
         
         
 class PositionComponent(Component):
@@ -139,6 +138,8 @@ class PositionComponent(Component):
         if self.vy:
             self.y_delay = abs(1/self.vy)
         self.y_waited = 0
+        if self.dispatcher:
+            dispatcher.register_listener(self, 'tick')
         
     @property
     def x(self):

@@ -42,6 +42,10 @@ class WalkerComponent(PositionComponent):
     """
     A simple PositionComponent that can change x;y on keypress
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dispatcher.register_listener(self, ['key_down'])
+        
     def on_event(self, event):
         if event.event_type == 'key_down':
             moved = False
@@ -72,7 +76,7 @@ def create_bullet():
     widget = Widget(*atlas.get_element('bullet'))
     widget_component = WidgetComponent(None, widget, owner=bullet_entity)
     dispatcher.register_listener(widget_component, 'tick')
-    position = PositionComponent(None, vx=5, vy=0, owner=bullet_entity)
+    position = PositionComponent(None, vx=15, vy=0, owner=bullet_entity)
     dispatcher.register_listener(position, 'tick')
     return bullet_entity
     
@@ -86,10 +90,8 @@ def create_cop(atlas, dispatcher, x, y):
     punk_entity = Entity(id='cop')
     widget = Widget(*atlas.get_element('cop'))
     widget_component = WidgetComponent(dispatcher, widget, owner=punk_entity)
-    dispatcher.register_listener(widget_component, 'tick')
     position_component = WalkerComponent(dispatcher, x=x, y=y,
                                          owner=punk_entity)
-    dispatcher.register_listener(position_component, ['tick', 'key_down'])
     spawner = SpawnerComponent(dispatcher, create_bullet,
                                relative_pos=(13, 4),
                                owner=punk_entity)
