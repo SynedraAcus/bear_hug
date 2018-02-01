@@ -70,8 +70,6 @@ def create_bullet():
     Create a bullet
     :return:
     """
-    # TODO: redraw bullet to avoid undrawn char
-    # atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
     bullet_entity = Entity(id='bullet')
     widget = Widget([['-', '*']], [['red', 'red']])
     widget_component = WidgetComponent(None, widget, owner=bullet_entity)

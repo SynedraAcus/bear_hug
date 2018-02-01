@@ -2,7 +2,7 @@
 A collection of Widgets designed specifically for the ECS system.
 """
 
-from bear_utilities import BearECSException
+from bear_utilities import BearECSException, rectangles_collide
 from ecs import Entity
 from widgets import Layout
 
@@ -58,9 +58,6 @@ class ECSLayout(Layout):
             entity_id, x, y = event.event_value
             # Attempts to move beyond the screen borders are silently ignored
             # Properly processing them is the collision detector's job anyway
-            if not 0 < x < len(self.chars[0]) or not \
-                    0 < y < len(self.chars):
-                return
             self.move_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
         elif event.event_type == 'ecs_create':

@@ -52,7 +52,7 @@
     "name": "bullet",
     "x": 8,
     "y": 10,
-    "xsize": 1,
-    "ysize": 2
+    "xsize": 2,
+    "ysize": 1
   }
 ]
