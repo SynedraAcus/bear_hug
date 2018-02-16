@@ -57,6 +57,9 @@ class BearEventDispatcher:
         Defaults to 'all'
         :return:
         """
+        # TODO: accept regex and/or the string with wildcards as an event type
+        # This will allow registering a listener to a group of related events,
+        # such as `ecs_*`
         if not hasattr(listener, 'on_event'):
             raise BearLoopException('Cannot add an object without on_event' +
                                     ' method asevents a listener')

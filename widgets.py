@@ -10,6 +10,7 @@ from bear_utilities import shapes_equal, blit, copy_shape, BearException, \
     BearLayoutException
 from collections import deque
 from event import BearEvent
+from time import time
 
 
 class Widget:
@@ -479,3 +480,18 @@ class ClosingListener(Listener):
                 if self.countdown == 0:
                     return BearEvent(event_type='service',
                                      event_value='shutdown')
+
+
+class LoggingListener(Listener):
+    """
+    A listener that logs the events it accepts
+    """
+    def __init__(self, handle):
+        super().__init__()
+        if not hasattr(handle, 'write'):
+            raise BearException('The LoggingListener needs a writable object')
+        self.handle = handle
+        
+    def on_event(self, event):
+        self.handle.write(f'{time()}: type {event.event_type}, ' +
+                          f'value {str(event.event_value)}')
