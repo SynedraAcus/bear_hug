@@ -98,6 +98,18 @@ def create_cop(atlas, dispatcher, x, y):
     dispatcher.add_event(BearEvent(event_type='ecs_add',
                                    event_value=('cop', x, y)))
 
+
+def create_barrel(atlas, dispatcher, x, y):
+    barrel_entity = Entity(id='Barrel')
+    widget = Widget(*atlas.get_element('barrel_1'))
+    widget_component = WidgetComponent(dispatcher, widget, owner=barrel_entity)
+    position_component = PositionComponent(dispatcher, x=x, y=y,
+                                           owner=barrel_entity)
+    dispatcher.add_event(BearEvent(event_type='ecs_create',
+                                   event_value=barrel_entity))
+    dispatcher.add_event(BearEvent(event_type='ecs_add',
+                                   event_value=('Barrel', x, y)))
+
     
 t = BearTerminal(size='85x60', title='Test window',
                  filter=['keyboard', 'mouse'])
@@ -111,7 +123,7 @@ layout = ECSLayout(chars, colors)
 dispatcher.register_listener(layout, 'all')
 
 create_cop(atlas, dispatcher, 5, 5)
-
+create_barrel(atlas, dispatcher, 20, 6)
 # Dev monitor, works outside ECS
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])

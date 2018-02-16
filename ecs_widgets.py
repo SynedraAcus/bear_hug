@@ -1,5 +1,5 @@
 """
-A collection of Widgets designed specifically for the ECS system.
+A collection of Widgets and Listeners designed specifically for the ECS system.
 """
 
 from bear_utilities import BearECSException, rectangles_collide
@@ -80,7 +80,28 @@ class ECSLayout(Layout):
                  y + self.entities[entity_id].widget.size[1] == len(self.chars):
                 r.append(BearEvent(event_type='ecs_collision',
                                    event_value=(entity_id, None)))
-                print(entity_id)
+            else:
+                collided = set()
+                # TODO: this is a complete mess. Refactor sometime later
+                # Maybe give the ECSLayout its own child_pointers that stores
+                # ids instead of pointers themselves. The memory cost will be
+                # negligible, but it'll save some cycles on the lookup and
+                # make this check a bit more reasonable
+                for y_offset in range(self.entities[entity_id].widget.size[1]):
+                    for x_offset in range(self.entities[entity_id].widget.size[0]):
+                        for other_widget in self._child_pointers[y+y_offset]\
+                            [x+x_offset]:
+                            # Child_pointers is ECS-agnostic and stores pointers
+                            # to the actual widgets
+                                collided.add(other_widget)
+                collided_ent_ids = set()
+                for child in self.entities:
+                    if child != entity_id and \
+                            self.entities[child].widget.widget in collided:
+                        collided_ent_ids.add(child)
+                for child in collided_ent_ids:
+                    r.append(BearEvent('ecs_collision', (entity_id, child)))
+                    print(f'Collision between {entity_id} and {child}')
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
             self.need_redraw = True
