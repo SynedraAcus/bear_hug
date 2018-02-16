@@ -115,6 +115,7 @@ class WidgetComponent(Component):
             raise TypeError('A widget is not actually a Widget')
         super().__init__(dispatcher=dispatcher, name='widget', owner=owner)
         self.widget = widget
+        self.size = (len(self.widget.chars[0]), len(self.widget.chars))
         if self.dispatcher:
             self.dispatcher.register_listener(self.widget, 'tick')
         

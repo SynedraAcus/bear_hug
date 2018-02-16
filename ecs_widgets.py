@@ -4,6 +4,7 @@ A collection of Widgets designed specifically for the ECS system.
 
 from bear_utilities import BearECSException, rectangles_collide
 from ecs import Entity
+from event import BearEvent
 from widgets import Layout
 
 
@@ -30,6 +31,19 @@ class ECSLayout(Layout):
     Announces that the widget of the entity in question should be added to the
     ECSLayout at (x;y). The emission of this event implies the existence of the
     entity and its widget.
+    
+    This widget also provides the collision detection for all widgets within it.
+    If a widget attempts to move into the position occupied by some other
+    widget, the movement is not blocked, but the 'ecs_collision' event(s) get
+    emitted. The event follows the following convention:
+    
+    `BearEvent(event_type='ecs_collision', event_value=(widget_moved.id,
+                                                    widget_collided_into.id))`
+    If the widget enters the screen border (ie will go outside it the next time
+    it moves, assuming it keeps the direction), the event takes the following
+    form:
+    `BearEvent(event_type='ecs_collision', event_value=(widget_moved.id,
+                                                        None))`
     """
     
     def __init__(self, chars, colors):
@@ -54,12 +68,19 @@ class ECSLayout(Layout):
         
     def on_event(self, event):
         # React to the events
+        r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
-            # Attempts to move beyond the screen borders are silently ignored
-            # Properly processing them is the collision detector's job anyway
             self.move_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
+            # Checking if collision events need to be emitted
+            # Check for collisions with border
+            if x == 0 or x+self.entities[entity_id].widget.size[0]\
+                 == len(self.chars[0]) or y == 0 or \
+                 y + self.entities[entity_id].widget.size[1] == len(self.chars):
+                r.append(BearEvent(event_type='ecs_collision',
+                                   event_value=(entity_id, None)))
+                print(entity_id)
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
             self.need_redraw = True
@@ -76,3 +97,5 @@ class ECSLayout(Layout):
             self._rebuild_self()
             self.terminal.update_widget(self)
             self.need_redraw = False
+        if r:
+            return r

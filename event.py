@@ -40,6 +40,7 @@ class BearEventDispatcher:
                             'service', # To do with queue or engine in general
                             'ecs_create', # A creation of entity
                             'ecs_move', # Movement of entities
+                            'ecs_collision', # Collision of entities
                             'ecs_add', # Addition of entity to ECSLayout
                             'ecs_remove' # Removal of entites from ECSLayout
                             }
