@@ -75,5 +75,33 @@
     "y": 10,
     "xsize": 2,
     "ysize": 1
+  },
+  {
+    "name": "bottle_ne",
+    "x": 7,
+    "y": 13,
+    "xsize": 4,
+    "ysize": 5
+  },
+  {
+    "name": "bottle_nw",
+    "x": 7,
+    "y": 18,
+    "xsize": 4,
+    "ysize": 5
+  },
+  {
+    "name": "bottle_se",
+    "x": 7,
+    "y": 23,
+    "xsize": 4,
+    "ysize": 4
+  },
+  {
+    "name": "bottle_sw",
+    "x": 7,
+    "y": 27,
+    "xsize": 4,
+    "ysize": 4
   }
 ]
