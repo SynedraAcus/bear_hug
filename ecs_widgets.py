@@ -110,6 +110,9 @@ class ECSLayout(Layout):
             entity_id, x, y = event.event_value
             self.add_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
+        elif event.event_type == 'ecs_update':
+            # Some widget has decided it's time to redraw itself
+            self.need_redraw = True
         elif event.event_type == 'service' and event.event_value == 'tick_over'\
                 and self.need_redraw:
             self._rebuild_self()

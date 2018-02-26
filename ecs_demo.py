@@ -10,7 +10,7 @@ from ecs_widgets import ECSLayout
 from event import BearEventDispatcher, BearEvent
 from resources import Atlas, XpLoader
 from widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
-    Layout, LoggingListener
+    Layout, LoggingListener, SimpleAnimationWidget
 
 import sys
 
@@ -103,7 +103,9 @@ def create_cop(atlas, dispatcher, x, y):
 
 def create_barrel(atlas, dispatcher, x, y):
     barrel_entity = Entity(id='Barrel')
-    widget = Widget(*atlas.get_element('barrel_1'))
+    widget = SimpleAnimationWidget((atlas.get_element('barrel_1'),
+                                    atlas.get_element('barrel_2')), 2,
+                                   emit_ecs= True)
     widget_component = WidgetComponent(dispatcher, widget, owner=barrel_entity)
     position_component = PositionComponent(dispatcher, x=x, y=y,
                                            owner=barrel_entity)
@@ -130,7 +132,7 @@ create_barrel(atlas, dispatcher, 20, 6)
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
 # Logger
-logger = LoggingListener(handle=sys.stdout)
+logger = LoggingListener(handle=sys.stderr)
 dispatcher.register_listener(logger, event_types='*ecs')
 t.start()
 t.add_widget(monitor, (0, 50), layer=1)

@@ -244,12 +244,15 @@ class SimpleAnimationWidget(Widget):
     A simple animated widget that cycles through the frames.
 
     Accepts two parameters on creation:
-    `frames`: an iterable of (chars, colors) tuples. These should all be the
-    same size
-    `fps`: frames per second.
+    `frames` an iterable of (chars, colors) tuples. These should all be
+    the same size
+    `fps` frames per second.
+    `emit_ecs`: whether to emit ecs_update events on every frame. Useless for
+    widgets outside ecs system, but those on ECSLayout are not redrawn unless
+    this event is emitted or something else causes ECSLayout to redraw
     """
     
-    def __init__(self, frames, fps):
+    def __init__(self, frames, fps, emit_ecs = False):
         super().__init__(*frames[0])
         if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
                 or not all(
@@ -259,6 +262,7 @@ class SimpleAnimationWidget(Widget):
         self.frame_time = 1 / fps
         self.running_index = 0
         self.have_waited = 0
+        self.emit_ecs = emit_ecs
     
     def on_event(self, event):
         if event.event_type == 'tick':
@@ -270,6 +274,8 @@ class SimpleAnimationWidget(Widget):
                 self.chars = self.frames[self.running_index][0]
                 self.colors = self.frames[self.running_index][1]
                 self.have_waited = 0
+                if self.emit_ecs:
+                    return BearEvent(event_type='ecs_update')
         elif self.terminal and event.event_type == 'service' \
                 and event.event_value == 'tick_over':
             # This widget is connected to the terminal directly and must update

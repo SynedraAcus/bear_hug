@@ -42,7 +42,8 @@ class BearEventDispatcher:
                             'ecs_move', # Movement of entities
                             'ecs_collision', # Collision of entities
                             'ecs_add', # Addition of entity to ECSLayout
-                            'ecs_remove' # Removal of entites from ECSLayout
+                            'ecs_remove', # Removal of entites from ECSLayout
+                            'ecs_update' # Someone needs to update ecs screen
                             }
         self.listeners = {x: [] for x in self.event_types}
         self.deque = deque()
@@ -52,7 +53,7 @@ class BearEventDispatcher:
         Add a listener to this event_dispatcher.
         :param object listener: a listener to add. Any object with an `on_event`
         callback can be added. The callback should accept a BearEvent instance
-        as a single parameter.
+        as a single parametickter.
         :param iterable|str event_types: either a string or an iterable of
         strings. If an iterable, its elements are event types the listener
         subscribes to.
