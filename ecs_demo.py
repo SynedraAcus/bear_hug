@@ -131,7 +131,7 @@ monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
 # Logger
 logger = LoggingListener(handle=sys.stdout)
-dispatcher.register_listener(logger, event_types=['ecs_move', 'ecs_collision'])
+dispatcher.register_listener(logger, event_types='*ecs')
 t.start()
 t.add_widget(monitor, (0, 50), layer=1)
 t.add_widget(layout, (0, 0), layer=1)

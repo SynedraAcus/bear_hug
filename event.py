@@ -53,26 +53,47 @@ class BearEventDispatcher:
         :param object listener: a listener to add. Any object with an `on_event`
         callback can be added. The callback should accept a BearEvent instance
         as a single parameter.
-        :param iterable|str event_types: either a list of event_types or 'all'.
+        :param iterable|str event_types: either a string or an iterable of
+        strings. If an iterable, its elements are event types the listener
+        subscribes to.
+        
+        If a string, the following rules apply:
+        * If a string equals 'all', the listener is subscribed to all currently
+        registered event types.
+        * Elif a string starts with '*', the listener is subscribed to all
+        currently registered event types for whose name event_types[1:] is a
+        substring.
+        * Else a string is interpreted as a single event type.
+        
+        In all cases incorrect event types raise BearLoopException.
         Defaults to 'all'
         :return:
         """
-        # TODO: accept regex and/or the string with wildcards as an event type
-        # This will allow registering a listener to a group of related events,
-        # such as `ecs_*`
         if not hasattr(listener, 'on_event'):
             raise BearLoopException('Cannot add an object without on_event' +
-                                    ' method asevents a listener')
+                                    ' method as a listener')
         if isinstance(event_types, str):
             if event_types == 'all':
-                event_types = self.listeners.keys()
+                # Subscribing to all events
+                types = self.listeners.keys()
+            elif event_types[0] == '*':
+                # Subscribing to a group of events
+                types = []
+                mask = event_types[1:]
+                for event_type in self.listeners:
+                    if mask in event_type:
+                        types.append(event_type)
             else:
-                # Let's think about incorrect types a bit later
-                event_types = [event_types]
-        for event_type in event_types:
+                # Subscribing to a single event type
+                types = [event_types]
+        else:
+            # Subscribing to a list of event types
+            types = event_types
+        for event_type in types:
             try:
                 self.listeners[event_type].append(listener)
             except KeyError:
+                # The incorrect list elements or single value processed here
                 raise BearLoopException('Unknown event class {}'.format(
                                             event_type))
     
@@ -93,6 +114,10 @@ class BearEventDispatcher:
     def register_event_type(self, event_type):
         """
         Add a new event type to be processed by queue.
+        
+        This makes passing (and subscribing to) a new event type possible. No
+        listeners are automatically subscribed to it, even those that were
+        initially registered with 'all' or fitting '*'-types.
         :param event_type:
         :return:
         """
