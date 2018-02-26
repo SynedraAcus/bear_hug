@@ -9,8 +9,10 @@ from ecs import Entity, WidgetComponent, PositionComponent, SpawnerComponent
 from ecs_widgets import ECSLayout
 from event import BearEventDispatcher, BearEvent
 from resources import Atlas, XpLoader
-from widgets import ClosingListener, Widget, FPSCounter, MousePosWidget, Layout
+from widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
+    Layout, LoggingListener
 
+import sys
 
 class DevMonitor(Layout):
     """
@@ -127,7 +129,9 @@ create_barrel(atlas, dispatcher, 20, 6)
 # Dev monitor, works outside ECS
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
-
+# Logger
+logger = LoggingListener(handle=sys.stdout)
+dispatcher.register_listener(logger, event_types=['ecs_move', 'ecs_collision'])
 t.start()
 t.add_widget(monitor, (0, 50), layer=1)
 t.add_widget(layout, (0, 0), layer=1)

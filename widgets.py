@@ -494,4 +494,4 @@ class LoggingListener(Listener):
         
     def on_event(self, event):
         self.handle.write(f'{time()}: type {event.event_type}, ' +
-                          f'value {str(event.event_value)}')
+                          f'value {str(event.event_value)}\n')

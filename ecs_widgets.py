@@ -64,7 +64,6 @@ class ECSLayout(Layout):
             raise BearECSException('Cannot add non-Entity to ECSLayout')
         self.entities[entity.id] = entity
         self.widgets[entity.id] = entity.widget.widget
-        print('Registered entity {}'.format(entity.id))
         
     def on_event(self, event):
         # React to the events
@@ -101,7 +100,6 @@ class ECSLayout(Layout):
                         collided_ent_ids.add(child)
                 for child in collided_ent_ids:
                     r.append(BearEvent('ecs_collision', (entity_id, child)))
-                    print(f'Collision between {entity_id} and {child}')
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
             self.need_redraw = True
@@ -110,7 +108,6 @@ class ECSLayout(Layout):
             self.need_redraw = True
         elif event.event_type == 'ecs_add':
             entity_id, x, y = event.event_value
-            print('Drawing entity {}'.format(entity_id))
             self.add_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
         elif event.event_type == 'service' and event.event_value == 'tick_over'\
