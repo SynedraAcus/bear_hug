@@ -88,12 +88,12 @@ def create_cop(atlas, dispatcher, x, y):
     :return:
     """
     punk_entity = Entity(id='cop')
-    widget = Widget(*atlas.get_element('cop'))
+    widget = Widget(*atlas.get_element('cop_r'))
     widget_component = WidgetComponent(dispatcher, widget, owner=punk_entity)
     position_component = WalkerComponent(dispatcher, x=x, y=y,
                                          owner=punk_entity)
     spawner = SpawnerComponent(dispatcher, create_bullet,
-                               relative_pos=(13, 4),
+                               relative_pos=(13, 5),
                                owner=punk_entity)
     dispatcher.add_event(BearEvent(event_type='ecs_create',
                                    event_value=punk_entity))
@@ -115,7 +115,7 @@ def create_barrel(atlas, dispatcher, x, y):
                                    event_value=('Barrel', x, y)))
 
     
-t = BearTerminal(size='85x60', title='Test window',
+t = BearTerminal(size='85x60', title='Brutality',
                  filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)

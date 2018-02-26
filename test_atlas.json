@@ -7,23 +7,44 @@
     "ysize": 10
   },
   {
-    "name": "cop",
+    "name": "cop_r",
     "x": 12,
     "y": 0,
     "xsize": 13,
-    "ysize": 17
+    "ysize": 18
   },
   {
-    "name": "nunchaku_punk",
+    "name": "cop_l",
+    "x": 12,
+    "y": 19,
+    "xsize": 13,
+    "ysize": 18
+  },
+  {
+    "name": "nunchaku_punk_l",
     "x": 25,
-    "y": 0,
+    "y": 1,
     "xsize": 10,
     "ysize": 17
   },
   {
-    "name": "bottle_punk",
+    "name": "nunchaku_punk_r",
+    "x": 27,
+    "y": 20,
+    "xsize": 10,
+    "ysize": 17
+  },
+  {
+    "name": "bottle_punk_l",
     "x": 35,
-    "y": 0,
+    "y": 1,
+    "xsize": 10,
+    "ysize": 17
+  },
+  {
+    "name": "bottle_punk_r",
+    "x": 38,
+    "y": 20,
     "xsize": 10,
     "ysize": 17
   },
