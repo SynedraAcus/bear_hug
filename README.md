@@ -21,18 +21,19 @@ But it also means that any system that cannot run SDL cannot run
 `bearlibterminal` games.
 
 ### What's there now?
-A loop and event system, a bunch of Widget prototypes, object-oriented
- Widget API, parsers for txt and `.xp` (REXPaint) formats.
+A loop and event system, ECS support, a bunch of Widget prototypes,
+object-oriented Widget API, parsers for txt and `.xp` (REXPaint) formats.
 
 ### What's planned?
 A scene manager, better animation, more widgets, more file formats,
-better settings API, proper font support.
+better settings API, useful components for your gamedev needs, proper
+font support.
 
 ### Where's the documentation?
 Not ready yet. Meanwhile, docstrings are pretty thorough.
 
 ### What are the dependencies?
-Bearlibterminal and Python3 (tested on 3.4.1 and 3.6).
+Bearlibterminal and Python3.6
 
 ### What's the license?
 MIT, copyright 2018, A. A. Morozov.
