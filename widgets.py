@@ -468,6 +468,9 @@ class InputField(Label):
     """
     A single-line field for keyboard input.
     
+    The length of the input line is limited by the InputField size. When the
+    input is finished (by pressing ENTER), InputField emits a
+    `BearEvent(event_type='text_input', event_value=(field.name, field.text))`
     Since BLT has no support for system keyboard layouts, only supports Latin.
     This also applies to non-letter symbols: for example, comma and period are
     considered to be on different keys even in Russian layout, where they are
@@ -499,9 +502,17 @@ class InputField(Label):
         # The name will be used when the input is finished
         self.name = name
         self.shift_pressed = False
+        # Set to True to return 'text_input' and
+        self.finishing = False
         self.accept_input = accept_input
         
     def on_event(self, event):
+        #TODO Reactivate InputField on mouse click, if inactive
+        # Requires it to have terminal for state.
+        if self.finishing:
+            # If finishing, the event will be ignored
+            return BearEvent(event_type='text_input',
+                             event_value=(self.name, self.text))
         if self.accept_input and event.event_type == 'key_down':
             # Stripping 'TK_' part
             symbol = event.event_value[3:]
@@ -513,6 +524,8 @@ class InputField(Label):
             # TK_ENTER is presumed to be the end of input
             elif symbol == 'ENTER':
                 self.accept_input = False
+                # returns immediately, unlike self.finish which sets it to
+                # return on the *next* event
                 return BearEvent(event_type='text_input',
                                  event_value=(self.name, self.text))
             elif len(self.text) < len(self.chars[0]):
@@ -522,7 +535,19 @@ class InputField(Label):
         elif event.event_type == 'key_up':
             if event.event_value == 'TK_SHIFT':
                 self.shift_pressed = False
-                
+
+    def finish(self):
+        """
+        Finish accepting the input and emit the 'text_input' event at the next
+        opportunity.
+        
+        The event will not be actually emitted until the next event is passed
+        to on_event.
+        :return:
+        """
+        self.accept_input = False
+        self.finishing = True
+        
     def _get_char(self, symbol):
         """
         Return the char corresponding to a TK_* code.
