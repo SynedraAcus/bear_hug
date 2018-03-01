@@ -491,11 +491,13 @@ class InputField(Label):
                        '3': '#', '4': '$', '5': '%', '6': '^', '7': '&',
                        '8': '*', '9': '(', '0': ')'}
     
-    def __init__(self, accept_input=True, **kwargs):
+    def __init__(self, name='Input field', accept_input=True, **kwargs):
         if 'width' not in kwargs:
             raise BearException('InputField cannot be created without ' +
                                 'either `width` or default text')
         super().__init__('', **kwargs)
+        # The name will be used when the input is finished
+        self.name = name
         self.shift_pressed = False
         self.accept_input = accept_input
         
@@ -509,9 +511,10 @@ class InputField(Label):
             elif symbol == 'SHIFT':
                 self.shift_pressed = True
             # TK_ENTER is presumed to be the end of input
-            # TODO: return appropriate event on the finished input
             elif symbol == 'ENTER':
                 self.accept_input = False
+                return BearEvent(event_type='text_input',
+                                 event_value=(self.name, self.text))
             elif len(self.text) < len(self.chars[0]):
                 self.text += self._get_char(symbol)
             if self.terminal:
