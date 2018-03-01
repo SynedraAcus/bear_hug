@@ -294,10 +294,12 @@ class ScrollableLayout(Layout):
     def scroll_to(self, pos):
         """
         Move field of view to `pos`.
+        
+        Raises `BearLayoutException` on incorrect position
         :param pos: tuple of ints
         :return:
         """
-        if not (len(pos) ==2 and all((isinstance(x, int) for x in pos))):
+        if not (len(pos) == 2 and all((isinstance(x, int) for x in pos))):
             raise BearLayoutException('Field of view position should be 2 ints')
         if not 0 <= pos[0] <= len(self._child_pointers[0]) - self.view_size[0] \
                 or not 0 <= pos[1] <= len(self._child_pointers)-self.view_size[1]:
@@ -307,6 +309,8 @@ class ScrollableLayout(Layout):
     def scroll_by(self, shift):
         """
         Move field of view by `shift[0]` to the right and by `shift[1]` down.
+        
+        Raises `BearLayoutException` on incorrect position
         :param shift: tuple of ints
         :return:
         """
@@ -466,14 +470,26 @@ class InputField(Label):
     
     Since BLT has no support for system keyboard layouts, only accepts Latin.
     """
-    def __init__(self, **kwargs):
+    # TODO: Shift, capital letters, and all that.
+    charcodes = {'SPACE': ' ', 'MINUS': '-', 'EQUALS': '=',
+                 'LBRACKET': '[', 'RBRACKET': ']', 'BACKSLASH': '\\',
+                 'SEMICOLON': ';', 'APOSTROPHE': '\'', 'GRAVE': '`',
+                 'COMMA': ',', 'PERIOD': '.', 'SLASH': '/',
+                 'KP_DIVIDE': '/', 'KP_MULTIPLY': '*', 'KP_MINUS': '-',
+                 'KP_PLUS': '+', 'KP_1': '1', 'KP_2': '2', 'KP_3': '3',
+                 'KP_4': '4', 'KP_5': '5', 'KP_6': 6, 'KP_7': 7,
+                 'KP_8': 8, 'KP_9': 9, 'KP_0': 0, 'KP_PERIOD': '.'
+                 }
+    
+    def __init__(self, accept_input=True, **kwargs):
         if 'width' not in kwargs:
             raise BearException('InputField cannot be created without ' +
                                 'either `width` or default text')
         super().__init__('', **kwargs)
+        self.accept_input = accept_input
         
     def on_event(self, event):
-        if event.event_type == 'key_down':
+        if self.accept_input and event.event_type == 'key_down':
             # Stripping 'TK_' part
             symbol = event.event_value[3:]
             # Blocking input if it's too long
@@ -482,6 +498,9 @@ class InputField(Label):
             else:
                 if symbol == 'BACKSPACE':
                     self.text = self.text[:-1]
+                elif symbol in self.charcodes and \
+                        len(self.text) < len(self.chars[0]):
+                    self.text += self.charcodes[symbol]
             if self.terminal:
                 self.terminal.update_widget(self)
                     
