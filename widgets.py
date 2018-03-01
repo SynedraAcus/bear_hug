@@ -289,7 +289,7 @@ class ScrollableLayout(Layout):
     def resize_view(self, new_size):
         # TODO: support resizing view.
         # This will require updating the pointers in terminal or parent layout
-        raise NotImplementedError
+        pass
     
     def scroll_to(self, pos):
         """
@@ -297,10 +297,10 @@ class ScrollableLayout(Layout):
         :param pos: tuple of ints
         :return:
         """
-        if not (len(pos) ==2 and all((isinstance(int, x) for x in pos))):
+        if not (len(pos) ==2 and all((isinstance(x, int) for x in pos))):
             raise BearLayoutException('Field of view position should be 2 ints')
         if not 0 <= pos[0] <= len(self._child_pointers[0]) - self.view_size[0] \
-                or not 0 <= pos[1] <= len(self._child_pointers-self.view_size[1]):
+                or not 0 <= pos[1] <= len(self._child_pointers)-self.view_size[1]:
             raise BearLayoutException('Scrolling to invalid position')
         self.view_pos = pos
     
