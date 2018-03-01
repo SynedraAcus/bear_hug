@@ -359,10 +359,11 @@ class SimpleAnimationWidget(Widget):
             self.terminal.update_widget(self)
             
 
-# Functional widgets. Please note that these include no decoration, BG or
+# Functional widgets. Please note that these include no decoration, BG, frame or
 # anything else. Ie Label is just a chunk of text on the screen, FPSCounter and
 # MousePosWidget are just the numbers that change. For the more complex visuals,
-# embed these into a Layout with the preferred BG
+# embed these into a Layout with a preferred BG
+
 class Label(Widget):
     """
     A widget that displays text.
@@ -394,8 +395,8 @@ class Label(Widget):
         self._just = just
         self._text = text
     
-    @classmethod
-    def _generate_chars(cls, text, width, height, just):
+    @staticmethod
+    def _generate_chars(text, width, height, just):
         """
         Internal method that generates a justified char list for the Label
         :param text:
@@ -435,19 +436,17 @@ class Label(Widget):
     def text(self, value):
         if not self._text:
             self._text = value
-        else:
-            # Since Label is not resized, there is no need to edit its colors
-            chars = copy_shape(self.chars, ' ')
-            self.chars = blit(chars, self._generate_chars(value,
-                                                          len(self.chars[0]),
-                                                          len(self.chars),
-                                                          self.just),
-                              0, 0)
-            self._text = value
-            # MousePosWidgets (a child of Label) may have self.terminal set
-            # despite not being connected to the terminal directly
-            if self.terminal and self in self.terminal._widget_pointers:
-                self.terminal.update_widget(self)
+        chars = copy_shape(self.chars, ' ')
+        self.chars = blit(chars, self._generate_chars(value,
+                                                      len(self.chars[0]),
+                                                      len(self.chars),
+                                                      self.just),
+                          0, 0)
+        self._text = value
+        # MousePosWidgets (a child of Label) may have self.terminal set
+        # despite not being connected to the terminal directly
+        if self.terminal and self in self.terminal._widget_pointers:
+            self.terminal.update_widget(self)
 
     @property
     def just(self):
@@ -459,7 +458,33 @@ class Label(Widget):
                                            len(self.chars), just=value)
         if self.terminal:
             self.terminal.update_widget(self)
+            
+            
+class InputField(Label):
+    """
+    A single-line field for keyboard input.
+    
+    Since BLT has no support for system keyboard layouts, only accepts Latin.
+    """
+    def __init__(self, **kwargs):
+        if 'width' not in kwargs:
+            raise BearException('InputField cannot be created without ' +
+                                'either `width` or default text')
+        super().__init__('', **kwargs)
         
+    def on_event(self, event):
+        if event.event_type == 'key_down':
+            # Stripping 'TK_' part
+            symbol = event.event_value[3:]
+            # Blocking input if it's too long
+            if len(symbol) == 1 and len(self.text) < len(self.chars[0]):
+                self.text += symbol
+            else:
+                if symbol == 'BACKSPACE':
+                    self.text = self.text[:-1]
+            if self.terminal:
+                self.terminal.update_widget(self)
+                    
 
 class FPSCounter(Label):
     """

@@ -10,7 +10,7 @@ from bear_utilities import copy_shape
 from event import BearEventDispatcher
 from resources import Atlas, TxtLoader, XpLoader
 from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
-    MousePosWidget, SimpleAnimationWidget, ScrollableLayout
+    MousePosWidget, SimpleAnimationWidget, ScrollableLayout, InputField
 
 
 class Firework(Widget):
@@ -182,7 +182,12 @@ scrollable = InputScrollable([['.' for x in range(30)] for y in range(30)],
 dispatcher.register_listener(scrollable, ['tick', 'key_down', 'service'])
 scrollable.add_child(barrel, pos=(0, 0))
 
+# Input field
+in_field = InputField(width=5)
+dispatcher.register_listener(in_field, 'key_down')
+
 t.start()
+t.add_widget(in_field, pos=(1, 1), layer=25)
 t.add_widget(monitor, pos=(0, 35), layer=1)
 t.add_widget(box, (12, 35), layer=1)
 t.add_widget(lamp, (43, 1), layer=2)
