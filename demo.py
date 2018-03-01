@@ -184,7 +184,7 @@ scrollable.add_child(barrel, pos=(0, 0))
 
 # Input field
 in_field = InputField(width=5)
-dispatcher.register_listener(in_field, 'key_down')
+dispatcher.register_listener(in_field, ['key_down', 'key_up'])
 
 t.start()
 t.add_widget(in_field, pos=(1, 1), layer=25)

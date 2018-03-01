@@ -468,9 +468,11 @@ class InputField(Label):
     """
     A single-line field for keyboard input.
     
-    Since BLT has no support for system keyboard layouts, only accepts Latin.
+    Since BLT has no support for system keyboard layouts, only supports Latin.
+    This also applies to non-letter symbols: for example, comma and period are
+    considered to be on different keys even in Russian layout, where they are
+    on the same one.
     """
-    # TODO: Shift, capital letters, and all that.
     charcodes = {'SPACE': ' ', 'MINUS': '-', 'EQUALS': '=',
                  'LBRACKET': '[', 'RBRACKET': ']', 'BACKSLASH': '\\',
                  'SEMICOLON': ';', 'APOSTROPHE': '\'', 'GRAVE': '`',
@@ -481,11 +483,20 @@ class InputField(Label):
                  'KP_8': 8, 'KP_9': 9, 'KP_0': 0, 'KP_PERIOD': '.'
                  }
     
+    # Charcodes for non-letter characters used via Shift button
+    shift_charcodes = {'MINUS': '_', 'EQUALS': '+', 'LBRACKET': '{',
+                       'RBRACKET': '}', 'BACKSLASH': '|', 'SEMICOLON': ':',
+                       'APOSTROPHE': '\"', 'GRAVE': '~', 'COMMA': '<',
+                       'PERIOD': '>', 'SLASH': '?', '1': '!', '2': '@',
+                       '3': '#', '4': '$', '5': '%', '6': '^', '7': '&',
+                       '8': '*', '9': '(', '0': ')'}
+    
     def __init__(self, accept_input=True, **kwargs):
         if 'width' not in kwargs:
             raise BearException('InputField cannot be created without ' +
                                 'either `width` or default text')
         super().__init__('', **kwargs)
+        self.shift_pressed = False
         self.accept_input = accept_input
         
     def on_event(self, event):
@@ -493,17 +504,44 @@ class InputField(Label):
             # Stripping 'TK_' part
             symbol = event.event_value[3:]
             # Blocking input if it's too long
-            if len(symbol) == 1 and len(self.text) < len(self.chars[0]):
-                self.text += symbol
-            else:
-                if symbol == 'BACKSPACE':
-                    self.text = self.text[:-1]
-                elif symbol in self.charcodes and \
-                        len(self.text) < len(self.chars[0]):
-                    self.text += self.charcodes[symbol]
+            if symbol == 'BACKSPACE':
+                self.text = self.text[:-1]
+            elif symbol == 'SHIFT':
+                self.shift_pressed = True
+            # TK_ENTER is presumed to be the end of input
+            # TODO: return appropriate event on the finished input
+            elif symbol == 'ENTER':
+                self.accept_input = False
+            elif len(self.text) < len(self.chars[0]):
+                self.text += self._get_char(symbol)
             if self.terminal:
                 self.terminal.update_widget(self)
-                    
+        elif event.event_type == 'key_up':
+            if event.event_value == 'TK_SHIFT':
+                self.shift_pressed = False
+                
+    def _get_char(self, symbol):
+        """
+        Return the char corresponding to a TK_* code.
+        
+        Considers the shift state
+        :param symbol:
+        :return:
+        """
+        if len(symbol) == 1:
+            if self.shift_pressed:
+                if symbol in '1234567890':
+                    return self.shift_charcodes[symbol]
+                else:
+                    return symbol
+            else:
+                return symbol.lower()
+        else:
+            if symbol in self.charcodes:
+                if self.shift_pressed and symbol in self.shift_charcodes:
+                    return self.shift_charcodes[symbol]
+                else:
+                    return self.charcodes[symbol]
 
 class FPSCounter(Label):
     """
