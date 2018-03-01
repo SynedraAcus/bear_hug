@@ -129,7 +129,7 @@ dispatcher.register_listener(layout, 'all')
 create_cop(atlas, dispatcher, 5, 5)
 create_barrel(atlas, dispatcher, 20, 6)
 # Dev monitor, works outside ECS
-monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
+monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher=dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
 # Logger
 logger = LoggingListener(handle=sys.stderr)

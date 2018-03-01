@@ -10,7 +10,7 @@ from bear_utilities import copy_shape
 from event import BearEventDispatcher
 from resources import Atlas, TxtLoader, XpLoader
 from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
-    MousePosWidget, SimpleAnimationWidget
+    MousePosWidget, SimpleAnimationWidget, ScrollableLayout
 
 
 class Firework(Widget):
@@ -121,20 +121,6 @@ class DevMonitor(Layout):
         self.mouser.terminal = value
         self._terminal = value
 
-
-class Flipper(Widget):
-    """
-    A flipping test
-    """
-    def __init__(self, chars, colors, flip_axis):
-        super().__init__(chars, colors)
-        self.flip_axis = flip_axis
-        
-    def on_event(self, event):
-        if event.event_type == 'key_down' and event.event_value == 'TK_SPACE':
-            self.flip(self.flip_axis)
-        self.terminal.update_widget(self)
-        
         
 t = BearTerminal(size='50x45', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
@@ -170,17 +156,16 @@ barrel = SimpleAnimationWidget((atlas.get_element('barrel_1'),
                                 atlas.get_element('barrel_2')), 2)
 dispatcher.register_listener(barrel, ['tick', 'service'])
 
-# Flipper
-x_flipper = Flipper(*atlas.get_element('bottle_punk'), 'x')
-y_flipper = Flipper(*atlas.get_element('bottle_punk'), 'y')
-dispatcher.register_listener(x_flipper, ['key_down'])
-dispatcher.register_listener(y_flipper, 'key_down')
+# A ScrollableLayout test
+scrollable = ScrollableLayout([['.' for x in range(30)] for y in range(30)],
+                              [['gray' for x in range(30)] for y in range(30)],
+                              (3, 3), (7, 7))
+dispatcher.register_listener(scrollable, ['tick', 'service'])
+scrollable.add_child(barrel, pos=(0, 0))
 
 t.start()
 t.add_widget(monitor, pos=(0, 35), layer=1)
 t.add_widget(box, (12, 35), layer=1)
-t.add_widget(barrel, (5, 5), layer=2)
 t.add_widget(lamp, (43, 1), layer=2)
-t.add_widget(x_flipper, (20, 15), layer=3)
-t.add_widget(y_flipper, (38, 15), layer=3)
+t.add_widget(scrollable, pos=(5, 5), layer=2)
 loop.run()

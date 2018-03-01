@@ -99,9 +99,7 @@ class Layout(Widget):
     colors provided at Layout creation. This child is available as l.children[0]
     or as l.background
     The Layout automatically redraws itself on `tick` event, whether its
-    children have updated or not. Due to the order events are emitted, any
-    changes that happened in children's chars or colors in current frame (except
-    as a direct response to input events) will be drawn on the *next* frame.
+    children have updated or not.
     """
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
@@ -130,19 +128,18 @@ class Layout(Widget):
         :param child:
         :return:
         """
-        if not skip_checks:
-            if not isinstance(child, Widget):
-                raise BearLayoutException('Cannot add non-Widget to a Layout')
-            if child in self.children:
-                raise BearLayoutException('Cannot add the same widget to layout twice')
-            if len(child.chars) > len(self.chars) or \
-                    len(child.chars[0]) > len(self.chars[0]):
-                raise BearLayoutException('Cannot add child that is bigger than a Layout')
-            if len(child.chars) + pos[1] > len(self.chars) or \
-                    len(child.chars[0]) + pos[0] > len(self.chars[0]):
-                raise BearLayoutException('Child won\'t fit at this position')
-            if child is self:
-                raise BearLayoutException('Cannot add Layout as its own child')
+        if not isinstance(child, Widget):
+            raise BearLayoutException('Cannot add non-Widget to a Layout')
+        if child in self.children:
+            raise BearLayoutException('Cannot add the same widget to layout twice')
+        if len(child.chars) > len(self._child_pointers) or \
+                len(child.chars[0]) > len(self._child_pointers[0]):
+            raise BearLayoutException('Cannot add child that is bigger than a Layout')
+        if len(child.chars) + pos[1] > len(self._child_pointers) or \
+                len(child.chars[0]) + pos[0] > len(self._child_pointers[0]):
+            raise BearLayoutException('Child won\'t fit at this position')
+        if child is self:
+            raise BearLayoutException('Cannot add Layout as its own child')
         self.children.append(child)
         self.child_locations[child] = pos
         for y in range(len(child.chars)):
@@ -238,6 +235,85 @@ class Layout(Widget):
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
 
 
+class ScrollableLayout(Layout):
+    """
+    A Layout that can show only a part of its surface.
+    
+    Like a Layout, accepts `chars` and `colors` on creation, which should be the
+    size of the entire layout, not the visible area. The latter is initialized
+    by `view_pos` and `view_size` arguments.
+    
+    Works by overloading _rebuild_self to only show a part of child_pointers
+    """
+    def __init__(self, chars, colors,
+                 view_pos=(0,0), view_size=(10, 10)):
+        super().__init__(chars, colors)
+        if not 0 <= view_pos[0] <= len(chars[0]) - view_size[0] \
+                or not 0 <= view_pos[1] <= len(chars) - view_size[1]:
+            raise BearLayoutException('Initial viewpoint outside ' +
+                                      'ScrollableLayout')
+        if not 0 < view_size[0] <= len(chars[0]) \
+                or not 0 < view_size[1] <= len(chars):
+            raise BearLayoutException('Invalid view field size')
+        self.view_pos = view_pos
+        self.view_size = view_size
+        self._rebuild_self()
+    
+    def _rebuild_self(self):
+        """
+        Same as `Layout()._rebuild_self`, but all child positions are also
+        offset by `view_pos`. Obviously, only `view_size[1]` lines
+        `view_size[0]` long are set as `chars` and `colors`.
+        :return:
+        """
+        chars = [[' ' for x in range(self.view_size[0])] \
+                 for y in range(self.view_size[1])]
+        colors = copy_shape(chars, None)
+        for line in range(self.view_size[1]):
+            for char in range(self.view_size[0]):
+                for child in self._child_pointers[self.view_pos[1]+line] \
+                                     [self.view_pos[0] + char][::-1]:
+                    # Addressing the correct child position
+                    c = child.chars[self.view_pos[1] + line-self.child_locations[child][1]] \
+                        [self.view_pos[0] + char-self.child_locations[child][0]]
+                    if c != ' ':
+                        # Spacebars are used as empty space and are transparent
+                        chars[line][char] = c
+                        break
+                colors[line][char] = \
+                    child.colors[self.view_pos[1] + line - self.child_locations[child][1]] \
+                    [self.view_pos[0] + char - self.child_locations[child][0]]
+        self.chars = chars
+        self.colors = colors
+    
+    def resize_view(self, new_size):
+        # TODO: support resizing view.
+        # This will require updating the pointers in terminal or parent layout
+        raise NotImplementedError
+    
+    def scroll_to(self, pos):
+        """
+        Move field of view to `pos`.
+        :param pos: tuple of ints
+        :return:
+        """
+        if not (len(pos) ==2 and all((isinstance(int, x) for x in pos))):
+            raise BearLayoutException('Field of view position should be 2 ints')
+        if not 0 <= pos[0] <= len(self._child_pointers[0]) - self.view_size[0] \
+                or not 0 <= pos[1] <= len(self._child_pointers-self.view_size[1]):
+            raise BearLayoutException('Scrolling to invalid position')
+        self.view_pos = pos
+    
+    def scroll_by(self, shift):
+        """
+        Move field of view by `shift[0]` to the right and by `shift[1]` down.
+        :param shift: tuple of ints
+        :return:
+        """
+        pos = (self.view_pos[0] + shift[0], self.view_pos[1] + shift[1])
+        self.scroll_to(pos)
+    
+    
 # Animations and other complex decorative Widgets
 class SimpleAnimationWidget(Widget):
     """
