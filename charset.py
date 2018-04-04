@@ -11,5 +11,9 @@ terminal.start()
 loop = BearLoop(terminal, BearEventDispatcher())
 loader = XpLoader(filename='charlist.xp')
 w = Widget(*loader.get_image())
+for line in w.chars:
+    for char in line:
+        print(char, end=',')
+    print('')
 terminal.add_widget(w, refresh=True)
 loop.run()
