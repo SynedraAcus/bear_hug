@@ -702,15 +702,20 @@ class LoggingListener(Listener):
 
     Records *all* the events it gets.
     """
-    #TODO: support some event filtering in LoggingListener
-    # Probably accept a callable that takes event and returns a bool as kwarg
-    def __init__(self, handle):
+    def __init__(self, handle, filter=None):
         super().__init__()
         if not hasattr(handle, 'write'):
             raise BearException('The LoggingListener needs a writable object')
+        if filter:
+            if not callable(filter):
+                raise BearException(
+                    'The LoggingListener needs callable as a filter')
+            else:
+                self.filter = filter
         self.handle = handle
         
     def on_event(self, event):
-        self.handle.write('{0}: type {1}, '.format(str(time()),
-                                                   event.event_type) +
-                          'value {}\n'.format(event.event_value))
+        if not self.filter or self.filter(event):
+            self.handle.write('{0}: type {1}, '.format(str(time()),
+                                                       event.event_type) +
+                              'value {}\n'.format(event.event_value))
