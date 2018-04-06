@@ -31,7 +31,6 @@ class Widget:
     `chars` and `colors` should be exactly the same shape, otherwise the
     BearException is raised.
     """
-    
     def __init__(self, chars, colors):
         if not isinstance(chars, list) or not isinstance(colors, list):
             raise BearException('Chars and colors should be lists')
@@ -85,6 +84,16 @@ class Widget:
         elif axis in ('y', 'vertical'):
             self.chars = self.chars[::-1]
             self.colors = self.colors[::-1]
+    # TODO: make sure that these properties are used throughout the lib
+    # There is a lot of old `len(widget.chars[0])` iterations, they are ugly
+
+    @property
+    def height(self):
+        return len(self.chars)
+
+    @property
+    def width(self):
+        return len(self.chars[0])
 
 
 class Layout(Widget):

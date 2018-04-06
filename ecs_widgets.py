@@ -49,6 +49,7 @@ class ECSLayout(Layout):
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
         self.entities = {}
+        # Pointers to actual widgets, not widget components
         self.widgets = {}
         self.need_redraw = False
         # A copy of child_pointers that stores entity IDs instead of Widget objs
@@ -68,52 +69,52 @@ class ECSLayout(Layout):
         self.widgets[entity.id] = entity.widget.widget
         
     def on_event(self, event):
-        # React to the events
+        # A list of events that would be emitted in response to this one
         r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
             self.move_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
             # Checking if collision events need to be emitted
-            # Check for collisions with border
+                # Check for collisions with border
             if x == 0 or x+self.entities[entity_id].widget.size[0]\
                  == len(self.chars[0]) or y == 0 or \
                  y + self.entities[entity_id].widget.size[1] == len(self.chars):
                 r.append(BearEvent(event_type='ecs_collision',
                                    event_value=(entity_id, None)))
             else:
-                collided = set()
-                # TODO: this is a complete mess. Refactor sometime later
-                # Maybe give the ECSLayout its own child_pointers that stores
-                # ids instead of pointers themselves. The memory cost will be
-                # negligible, but it'll save some cycles on the lookup and
-                # make this check a bit more reasonable
+                # Collisions with other entities
+                collided_ent_ids = set()
                 for y_offset in range(self.entities[entity_id].widget.size[1]):
                     for x_offset in range(self.entities[entity_id].widget.size[0]):
-                        for other_widget in self._child_pointers[y+y_offset]\
-                            [x+x_offset]:
-                            # Child_pointers is ECS-agnostic and stores pointers
-                            # to the actual widgets
-                                collided.add(other_widget)
-                collided_ent_ids = set()
-                for child in self.entities:
-                    if child != entity_id and \
-                            self.entities[child].widget.widget in collided:
-                        collided_ent_ids.add(child)
+                        for other in self._child_ids[y+y_offset][x+x_offset]:
+                            if other and other != entity_id:
+                                collided_ent_ids.add(other)
                 for child in collided_ent_ids:
                     r.append(BearEvent('ecs_collision', (entity_id, child)))
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
             self.need_redraw = True
         elif event.event_type == 'ecs_remove':
-            self.remove_child(self.entities[event.event_value].widget)
+            entity_id = event.event_value
+            x, y = self.child_locations[self.widgets[entity_id]]
+            self.remove_child(self.widgets[entity_id])
             self.need_redraw = True
+            # Updating self._child_ids
+            for char_x in range(x, x+self.widgets[entity_id].width):
+                for char_y in range(y, y+self.widgets[entity_id].height):
+                    self._child_ids[char_y][char_x].remove(entity_id)
         elif event.event_type == 'ecs_add':
             entity_id, x, y = event.event_value
             self.add_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
+            # Updating self._child_ids
+            for char_x in range(x, x+self.widgets[entity_id].width):
+                for char_y in range(y, y+self.widgets[entity_id].height):
+                    self._child_ids[char_y][char_x].append(entity_id)
         elif event.event_type == 'ecs_update':
-            # Some widget has decided it's time to redraw itself
+            # Some entity has decided it's time to redraw itself
+            # Not really important which one, just redraw the whole screen
             self.need_redraw = True
         elif event.event_type == 'service' and event.event_value == 'tick_over'\
                 and self.need_redraw:
