@@ -130,6 +130,17 @@ class XpLoader(ASCIILoader):
     transparent_cell_back_r = 255
     transparent_cell_back_g = 0
     transparent_cell_back_b = 255
+
+    # These chars are not correctly decoded by python's bytes-to-str conversion
+    # and have to be processed manually in `_parse_individual_cell()`
+    fix_chars = {0x01: "\u263A", 0x02: "\u263B", 0x03: "\u2665", 0x04: "\u2666",
+        0x05: "\u2663", 0x06: "\u2660", 0x07: "\u2022", 0x08: "\u25D8",
+        0x09: "\u25CB", 0x0a: "\u25D9", 0x0b: "\u2642", 0x0c: "\u2640",
+        0x0d: "\u266A", 0x0e: "\u266B", 0x0f: "\u263C", 0x10: "\u25BA",
+        0x11: "\u25C4", 0x12: "\u2195", 0x13: "\u203C", 0x14: "\u00B6",
+        0x15: "\u00A7", 0x16: "\u25AC", 0x17: "\u21A8", 0x18: "\u2191",
+        0x19: "\u2193", 0x1a: "\u2192", 0x1b: "\u2190", 0x1c: "\u221F",
+        0x1d: "\u2194", 0x1e: "\u25B2", 0x1f: "\u25BC", 0x7f: "\u2302"}
     
     def __init__(self, filename, default_color='white'):
         super().__init__()
@@ -324,7 +335,12 @@ class XpLoader(ASCIILoader):
         if reverse_endian:
             keycode = keycode[::-1]
         keycode = int(base64.b16encode(keycode), 16)
-        char = bytes([keycode]).decode('cp437')
+        # Processing characters that are redefined by IBM437 from ASCII control
+        # sequences and are thus not correctly decoded by `.decode('cp437')`
+        if keycode in self.fix_chars:
+            char = self.fix_chars[keycode]
+        else:
+            char = bytes([keycode]).decode('cp437')
         if not char or char == '\x00':
             char = ' '
         offset += self.layer_keycode_bytes
