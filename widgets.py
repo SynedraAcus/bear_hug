@@ -235,10 +235,10 @@ class Layout(Widget):
         """
         The Layout redraws itself on every frame, whether or not its contents
         changed. Some of its children may or may not have more efficient
-        implementations
+        implementations, but the base Layout has to do this because it has no
+        idea whether any of the children have changed in this tick.
         :return:
         """
-        # TODO: don't have Layout redraw itself unless it needs to
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
             self.terminal.update_widget(self)
