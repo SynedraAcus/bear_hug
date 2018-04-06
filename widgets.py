@@ -95,6 +95,10 @@ class Widget:
     def width(self):
         return len(self.chars[0])
 
+    @property
+    def size(self):
+        return len(self.chars[0]), len(self.chars)
+
 
 class Layout(Widget):
     """

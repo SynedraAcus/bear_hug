@@ -104,10 +104,11 @@ class WidgetComponent(Component):
     """
     Widget as a component.
     
-    This component is responsible for drawing stuff on the screen. Since Widgets
+    This component is an ECS wrapper around the Widget object. Since Widgets
     can accept events and it is sometimes reasonable to keep some event logic in
     the Widget instead of Components (ie to keep animation running), its
-    `on_event` method simply passes the events to the Widget
+    `on_event` method simply passes the events to the Widget. It also supports
+    `height`, `width` and `size` properties, also by calling widget's ones.
     """
     
     def __init__(self, dispatcher, widget, owner=None):
@@ -118,6 +119,22 @@ class WidgetComponent(Component):
         self.size = (len(self.widget.chars[0]), len(self.widget.chars))
         if self.dispatcher:
             self.dispatcher.register_listener(self.widget, 'tick')
+
+    def on_event(self, event):
+        return self.widget.on_event(event)
+
+    @property
+    def height(self):
+        return self.widget.height
+
+    @property
+    def width(self):
+        return self.widget.width
+
+    @property
+    def size(self):
+        return self.widget.size
+
         
         
 class PositionComponent(Component):
