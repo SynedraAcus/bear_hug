@@ -119,19 +119,18 @@ class Layout(Widget):
         self.add_child(w, pos=(0, 0))
         
     # Operations on children
-    def add_child(self, child, pos, skip_checks = False):
+    def add_child(self, child, pos, check_presence = True):
         """
         Add a widget as a child at a given (relative) position.
-        The child has to be a Widget or a Widget subclass that haven't yet been
-        added to this Layout and whose dimensions are less than or equal to the
-        Layout's
+        The child has to be a Widget or a Widget subclass, it should be small
+        enough to fit into Layout and its position should be such that no child
+        chars fall beyond Layout borders. If `check_presence=True`is set as
+        kwarg, it also should be not yet added to this Layout.
         :param child:
         :return:
         """
         if not isinstance(child, Widget):
             raise BearLayoutException('Cannot add non-Widget to a Layout')
-        if child in self.children:
-            raise BearLayoutException('Cannot add the same widget to layout twice')
         if len(child.chars) > len(self._child_pointers) or \
                 len(child.chars[0]) > len(self._child_pointers[0]):
             raise BearLayoutException('Cannot add child that is bigger than a Layout')
@@ -140,6 +139,9 @@ class Layout(Widget):
             raise BearLayoutException('Child won\'t fit at this position')
         if child is self:
             raise BearLayoutException('Cannot add Layout as its own child')
+        if check_presence and child in self.children:
+            raise BearLayoutException(
+                'Cannot add the same widget to layout twice')
         self.children.append(child)
         self.child_locations[child] = pos
         for y in range(len(child.chars)):
@@ -169,7 +171,7 @@ class Layout(Widget):
     
     def move_child(self, child, new_pos):
         self.remove_child(child, remove_completely=False)
-        self.add_child(child, pos=new_pos, skip_checks=True)
+        self.add_child(child, pos=new_pos, check_presence=False)
     
     # BG's chars and colors are not meant to be set directly
     @property

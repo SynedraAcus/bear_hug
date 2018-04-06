@@ -2,7 +2,7 @@
 A collection of Widgets and Listeners designed specifically for the ECS system.
 """
 
-from bear_utilities import BearECSException, rectangles_collide
+from bear_utilities import BearECSException, rectangles_collide, copy_shape
 from ecs import Entity
 from event import BearEvent
 from widgets import Layout
@@ -51,6 +51,8 @@ class ECSLayout(Layout):
         self.entities = {}
         self.widgets = {}
         self.need_redraw = False
+        # A copy of child_pointers that stores entity IDs instead of Widget objs
+        self._child_ids = copy_shape(self._child_pointers)
     
     def add_entity(self, entity):
         """
