@@ -70,6 +70,7 @@ class Component(Listener):
     them.
     """
     def __init__(self, dispatcher, name='Root component', owner=None):
+        super().__init__()
         if not name:
             raise BearECSException('Cannot create a component without a name')
         self.dispatcher = dispatcher
@@ -83,6 +84,7 @@ class Component(Listener):
         
         This is only useful if the component is passed from one owner to
         another, or if the component is created with the `owner` argument.
+        This method calls owner's `add_component`
         :param owner:
         :return:
         """
@@ -116,7 +118,6 @@ class WidgetComponent(Component):
             raise TypeError('A widget is not actually a Widget')
         super().__init__(dispatcher=dispatcher, name='widget', owner=owner)
         self.widget = widget
-        self.size = (len(self.widget.chars[0]), len(self.widget.chars))
         if self.dispatcher:
             self.dispatcher.register_listener(self.widget, 'tick')
 
@@ -135,8 +136,7 @@ class WidgetComponent(Component):
     def size(self):
         return self.widget.size
 
-        
-        
+
 class PositionComponent(Component):
     """
     A component responsible for positioning Widget on ECSLayout.

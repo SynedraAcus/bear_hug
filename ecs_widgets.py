@@ -76,10 +76,13 @@ class ECSLayout(Layout):
             self.move_child(self.widgets[entity_id], (x, y))
             self.need_redraw = True
             # Checking if collision events need to be emitted
-                # Check for collisions with border
-            if x == 0 or x+self.entities[entity_id].widget.size[0]\
-                 == len(self.chars[0]) or y == 0 or \
-                 y + self.entities[entity_id].widget.size[1] == len(self.chars):
+                # Check for collisions with border. Note that it checks
+                # self._child_pointers, not self.size, because this could be a
+                # ScrollableLayout
+            if x == 0 or x+self.entities[entity_id].widget.width\
+                 == len(self._child_pointers[0]) or y == 0 or \
+                 y + self.entities[entity_id].widget.height == \
+                    len(self._child_pointers):
                 r.append(BearEvent(event_type='ecs_collision',
                                    event_value=(entity_id, None)))
             else:

@@ -4,6 +4,7 @@ A collection of random functions useful for bear_hug
 
 from copy import deepcopy
 
+
 def shapes_equal(a, b):
     """
     Tests if two nested lists are of the same shape

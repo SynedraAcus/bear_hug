@@ -31,6 +31,7 @@ class Widget:
     `chars` and `colors` should be exactly the same shape, otherwise the
     BearException is raised.
     """
+    # TODO: all widgets should have terminal AND parent
     def __init__(self, chars, colors):
         if not isinstance(chars, list) or not isinstance(colors, list):
             raise BearException('Chars and colors should be lists')
@@ -84,8 +85,6 @@ class Widget:
         elif axis in ('y', 'vertical'):
             self.chars = self.chars[::-1]
             self.colors = self.colors[::-1]
-    # TODO: make sure that these properties are used throughout the lib
-    # There is a lot of old `len(widget.chars[0])` iterations, they are ugly
 
     @property
     def height(self):
@@ -144,21 +143,24 @@ class Layout(Widget):
         """
         if not isinstance(child, Widget):
             raise BearLayoutException('Cannot add non-Widget to a Layout')
-        if len(child.chars) > len(self._child_pointers) or \
-                len(child.chars[0]) > len(self._child_pointers[0]):
-            raise BearLayoutException('Cannot add child that is bigger than a Layout')
-        if len(child.chars) + pos[1] > len(self._child_pointers) or \
-                len(child.chars[0]) + pos[0] > len(self._child_pointers[0]):
+        # Note that self.height/self.width cannot be used here.
+        # ScrollableLayout has more child space than it has screen space
+        if child.height > len(self._child_pointers) or \
+                child.width > len(self._child_pointers[0]):
+            raise BearLayoutException(
+                'Cannot add child that is bigger than a Layout')
+        if child.height + pos[1] > len(self._child_pointers) or \
+                child.width + pos[0] > len(self._child_pointers[0]):
             raise BearLayoutException('Child won\'t fit at this position')
         if child is self:
             raise BearLayoutException('Cannot add Layout as its own child')
         if check_presence and child in self.children:
             raise BearLayoutException(
-                'Cannot add the same widget to layout twice')
+                'Cannot add the same widget to Layout twice')
         self.children.append(child)
         self.child_locations[child] = pos
-        for y in range(len(child.chars)):
-            for x in range(len(child.chars[0])):
+        for y in range(child.height):
+            for x in range(child.width):
                 self._child_pointers[pos[1] + y][pos[0] + x].append(child)
 
     def remove_child(self, child, remove_completely=True):
@@ -174,8 +176,8 @@ class Layout(Widget):
         if child not in self.children:
             raise BearLayoutException('Layout can only remove its child')
         # process pointers
-        for y in range(len(child.chars)):
-            for x in range(len(child.chars[0])):
+        for y in range(child.height):
+            for x in range(child.width):
                 self._child_pointers[self.child_locations[child][1] + y] \
                         [self.child_locations[child][0] + x].remove(child)
         if remove_completely:
@@ -198,8 +200,8 @@ class Layout(Widget):
         if not shapes_equal(self.chars, value.chars):
             # chars and colors are always the same size
             raise BearLayoutException('Wrong Layout background size')
-        for row in range(len(self.chars)):
-            for column in range(len(self.chars[0])):
+        for row in range(self.height):
+            for column in range(self.width):
                 self._child_pointers[row][column][0] = value
                 # self.colors[row][column][0] = value
         del self.child_locations[self.children[0]]
@@ -213,8 +215,8 @@ class Layout(Widget):
         """
         chars = copy_shape(self.chars, ' ')
         colors = copy_shape(self.colors, None)
-        for line in range(len(chars)):
-            for char in range(len(chars[0])):
+        for line in range(self.height):
+            for char in range(self.width):
                 for child in self._child_pointers[line][char][::-1]:
                     # Addressing the correct child position
                     c = child.chars[line-self.child_locations[child][1]] \
@@ -222,18 +224,21 @@ class Layout(Widget):
                     if c != ' ':
                         # Spacebars are used as empty space and are transparent
                         chars[line][char] = c
+                        colors[line][char] = \
+                            child.colors[line - self.child_locations[child][1]]\
+                            [char - self.child_locations[child][0]]
                         break
-                colors[line][char] = \
-                    child.colors[line - self.child_locations[child][1]] \
-                    [char - self.child_locations[child][0]]
         self.chars = chars
         self.colors = colors
     
     def on_event(self, event):
         """
-        The Layout redraws itself on every frame
+        The Layout redraws itself on every frame, whether or not its contents
+        changed. Some of its children may or may not have more efficient
+        implementations
         :return:
         """
+        # TODO: don't have Layout redraw itself unless it needs to
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
             self.terminal.update_widget(self)
@@ -302,8 +307,9 @@ class ScrollableLayout(Layout):
         self.colors = colors
     
     def resize_view(self, new_size):
-        # TODO: support resizing view.
+        # TODO: support resizing view in ScrollableLayout.
         # This will require updating the pointers in terminal or parent layout
+        # Which, in turn,requires the widgets being able to distinguish those
         pass
     
     def scroll_to(self, pos):
@@ -315,9 +321,9 @@ class ScrollableLayout(Layout):
         :return:
         """
         if not (len(pos) == 2 and all((isinstance(x, int) for x in pos))):
-            raise BearLayoutException('Field of view position should be 2 ints')
+            raise BearLayoutException('Field-of-view position should be 2 ints')
         if not 0 <= pos[0] <= len(self._child_pointers[0]) - self.view_size[0] \
-                or not 0 <= pos[1] <= len(self._child_pointers)-self.view_size[1]:
+                or not 0 <=pos[1]<= len(self._child_pointers)-self.view_size[1]:
             raise BearLayoutException('Scrolling to invalid position')
         self.view_pos = pos
     
@@ -457,8 +463,7 @@ class Label(Widget):
             self._text = value
         chars = copy_shape(self.chars, ' ')
         self.chars = blit(chars, self._generate_chars(value,
-                                                      len(self.chars[0]),
-                                                      len(self.chars),
+                                                      self.width, self.height,
                                                       self.just),
                           0, 0)
         self._text = value
@@ -473,8 +478,8 @@ class Label(Widget):
     
     @just.setter
     def just(self, value):
-        self.chars = Label._generate_chars(self.text, len(self.chars[0]),
-                                           len(self.chars), just=value)
+        self.chars = Label._generate_chars(self.text, self.width,
+                                           self.height, just=value)
         if self.terminal:
             self.terminal.update_widget(self)
             
@@ -511,8 +516,7 @@ class InputField(Label):
     
     def __init__(self, name='Input field', accept_input=True, **kwargs):
         if 'width' not in kwargs:
-            raise BearException('InputField cannot be created without ' +
-                                'either `width` or default text')
+            raise BearException('InputField cannot be created without width')
         super().__init__('', **kwargs)
         # The name will be used when the input is finished
         self.name = name
@@ -525,7 +529,7 @@ class InputField(Label):
         #TODO Reactivate InputField on mouse click, if inactive
         # Requires it to have terminal for state.
         if self.finishing:
-            # If finishing, the event will be ignored
+            # If finishing, the incoming event will be ignored
             return BearEvent(event_type='text_input',
                              event_value=(self.name, self.text))
         if self.accept_input and event.event_type == 'key_down':
@@ -558,6 +562,8 @@ class InputField(Label):
         
         The event will not be actually emitted until the next event is passed
         to on_event.
+        This method is meant to be called when another widget (say, a button)
+        orders this widget to finish
         :return:
         """
         self.accept_input = False
@@ -586,14 +592,15 @@ class InputField(Label):
                 else:
                     return self.charcodes[symbol]
 
+
 class FPSCounter(Label):
     """
     A simple widget that measures FPS.
     Actually just prints 1/(average runtime over the last 100 ticks in seconds),
     so it takes 100 ticks to get an accurate reading. Not relevant except on the
-    first several seconds of the program run or after FPS has changed, but if it
-    seems like the game takes a second or two to reach the target FPS -- it just
-    seems that way.
+    first several seconds of the program run or after FPS settings have changed,
+    but if it seems like the game takes a second or two to reach the target
+    FPS -- it just seems.
     """
     def __init__(self, **kwargs):
         self.samples_deque = deque(maxlen=100)
@@ -691,8 +698,12 @@ class ClosingListener(Listener):
 
 class LoggingListener(Listener):
     """
-    A listener that logs the events it accepts
+    A listener that logs the events it accepts.
+
+    Records *all* the events it gets.
     """
+    #TODO: support some event filtering in LoggingListener
+    # Probably accept a callable that takes event and returns a bool as kwarg
     def __init__(self, handle):
         super().__init__()
         if not hasattr(handle, 'write'):
@@ -700,5 +711,6 @@ class LoggingListener(Listener):
         self.handle = handle
         
     def on_event(self, event):
-        self.handle.write('{0}: type {1}, '.format(str(time()), event.event_type) +
+        self.handle.write('{0}: type {1}, '.format(str(time()),
+                                                   event.event_type) +
                           'value {}\n'.format(event.event_value))
