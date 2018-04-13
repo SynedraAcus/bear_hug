@@ -6,8 +6,8 @@ entities are recommended.
 """
 
 from bear_hug import BearTerminal
-from bear_utilities import shapes_equal, blit, copy_shape, BearException, \
-    BearLayoutException
+from bear_utilities import shapes_equal, blit, copy_shape, slice_nested,\
+    BearException, BearLayoutException
 from collections import deque
 from event import BearEvent
 from time import time
@@ -280,6 +280,57 @@ class Layout(Widget):
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
 
 
+class ScrollBar(Widget):
+    """
+    A scrollbar to be used with ScrollableLayout. On creation accepts the
+    following parameters:
+    `orientation` -- one of 'vertical' or 'horizontal'
+    `length` -- int
+    'colors' -- two BLT-compatible colors for background and the moving thingy
+    
+    Does not accept input
+    """
+    # TODO: actually use the scrollbar in InputLayout
+    def __init__(self, orientation='vertical', length=10,
+                 colors=('gray', 'white')):
+        if orientation not in ('vertical', 'horizontal'):
+            raise BearException(
+                'Orientation must be either vertical or horizontal')
+        if orientation == 'vertical':
+            # TODO: custom chars in ScrollBar
+            chars = [['#'] for _ in range(length)]
+        else:
+            chars = [['#' for _ in range(length)]]
+        self.length = length
+        self.orientation = orientation
+        self.bg_color = colors[0]
+        self.bar_color = colors[1]
+        colors = copy_shape(chars, self.bg_color)
+        super().__init__(chars, colors)
+        
+    def show_pos(self, position, percentage):
+        """
+        Move the scrollbar.
+        :param position: Float. The position of the top (or left) side of the
+        scrollbar, as part of its length
+        :param percentage: Float. The lengths of the scrollbar, as part of the
+        total bar length
+        :return:
+        """
+        # Not really effective, but still quicker than Layout would be
+        # Single-widget bar gets redrawn only when called, while a Layout
+        # would've redrawn every tick
+        start = round(self.length*position)
+        width = round(self.length*percentage)
+        self.colors = copy_shape(self.chars, self.bg_color)
+        if self.orientation == 'vertical':
+            for i in range(start, start+width):
+                self.colors[i][0] = self.bar_color
+        else:
+            for i in range(start, start+width):
+                self.colors[0][i] = self.bar_color
+
+
 class ScrollableLayout(Layout):
     """
     A Layout that can show only a part of its surface.
@@ -291,7 +342,7 @@ class ScrollableLayout(Layout):
     Works by overloading _rebuild_self to only show a part of child_pointers
     """
     def __init__(self, chars, colors,
-                 view_pos=(0,0), view_size=(10, 10)):
+                 view_pos=(0, 0), view_size=(10, 10)):
         super().__init__(chars, colors)
         if not 0 <= view_pos[0] <= self.width - view_size[0] \
                 or not 0 <= view_pos[1] <= self.height - view_size[1]:
@@ -300,8 +351,8 @@ class ScrollableLayout(Layout):
         if not 0 < view_size[0] <= len(chars[0]) \
                 or not 0 < view_size[1] <= len(chars):
             raise BearLayoutException('Invalid view field size')
-        self.view_pos = view_pos
-        self.view_size = view_size
+        self.view_pos = view_pos[:]
+        self.view_size = view_size[:]
         self._rebuild_self()
     
     def _rebuild_self(self):
@@ -362,7 +413,72 @@ class ScrollableLayout(Layout):
         pos = (self.view_pos[0] + shift[0], self.view_pos[1] + shift[1])
         self.scroll_to(pos)
     
+
+class InputScrollable(Layout):
+    """
+    A ScrollableLayout wrapper that accepts input events and supports the usual
+    scrollable view bells and whistles. Like ScrollableLayout, accepts chars and
+    colors the size of the *entire* layout and inits visible area using view_pos
+    and view_size.
     
+    If bottom_bar and/or right_bar is set to True, it will be made one char
+    bigger than view_size in the corresponding dimension to add ScrollBar.
+    
+    Can be scrolled by arrow keys.
+    """
+    def __init__(self, chars, colors, view_pos=(0, 0), view_size=(10, 10),
+                 bottom_bar=False, right_bar=False):
+        # Scrollable is initalized before self to avoid damaging it by the
+        # modified view_size (in case of scrollbars)
+        scrollable = ScrollableLayout(chars, colors, view_pos, view_size)
+        if bottom_bar:
+            view_size[0] += 1
+        if right_bar:
+            view_size[1] += 1
+        ch = slice_nested(chars, view_pos, view_size)
+        co = slice_nested(colors, view_pos, view_size)
+        # While True, can add children to self. Otherwise they are passed to
+        # self.scrollable
+        self.building_self = True
+        super().__init__(ch, co)
+        self.scrollable = scrollable
+        self.right_bar = None
+        self.bottom_bar = None
+        self.add_child(self.scrollable, pos=(0, 0), pass_to_scrollable=False)
+        if right_bar:
+            self.right_bar = 1
+        if bottom_bar:
+            self.bottom_bar = 1
+        self.building_self = False
+        
+    # TODO: accept mouse wheel and drag scroll
+    def on_event(self, event):
+        if event.event_type == 'key_down':
+            if event.event_value == 'TK_DOWN' and \
+              self.scrollable.view_pos[1] + self.scrollable.view_size[1]\
+                    < len(self.scrollable._child_pointers):
+                self.scrollable.scroll_by((0, 1))
+            elif event.event_value == 'TK_UP' and \
+             self.scrollable.view_pos[1] > 0:
+                self.scrollable.scroll_by((0, -1))
+            elif event.event_value == 'TK_RIGHT' and \
+              self.scrollable.view_pos[0] + self.scrollable.view_size[0]\
+                    < len(self.scrollable._child_pointers[0]):
+                self.scrollable.scroll_by((1, 0))
+            elif event.event_value == 'TK_LEFT' and \
+              self.scrollable.view_pos[0] > 0:
+                self.scrollable.scroll_by((-1, 0))
+            elif event.event_type == 'TK_SPACE':
+                self.scrollable.scroll_to((0, 0))
+        super().on_event(event)
+
+    def add_child(self, child, pos, skip_checks=False, pass_to_scrollable=True):
+        if not self.building_self:
+            self.scrollable.add_child(child, pos, skip_checks)
+        else:
+            super().add_child(child, pos, skip_checks)
+            
+
 # Animations and other complex decorative Widgets
 class SimpleAnimationWidget(Widget):
     """

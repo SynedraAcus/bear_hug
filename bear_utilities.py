@@ -42,6 +42,22 @@ def copy_shape(l, value=None):
     return r
 
 
+def slice_nested(l, slice_pos, slice_size):
+    """
+    Slice the nested list
+    :param l:
+    :param slice_pos:
+    :return:
+    """
+    r = []
+    for y in range(slice_pos[1], slice_pos[1] + slice_size[1]):
+        line = []
+        for x in range(slice_pos[0], slice_pos[0] + slice_size[0]):
+            line.append(l[y][x])
+        r.append(line)
+    return r
+
+
 def rotate_list(l):
     """
     Take a nested list of (x, y) dimensions, return an (y, x) list

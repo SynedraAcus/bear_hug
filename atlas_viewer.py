@@ -3,7 +3,7 @@
 from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
-from widgets import ScrollableLayout, ClosingListener, Listener, Layout,\
+from widgets import InputScrollable, ClosingListener, Listener, Layout,\
     Label, Widget
 from resources import XpLoader, Atlas
 
@@ -41,27 +41,9 @@ class ElementBox(Layout):
         chars.append(['#' for x in range(width+2)])
         colors = copy_shape(chars, color)
         return chars, colors
+
     
-    
-class InputScrollable(ScrollableLayout):
-    """
-    A ScrollableLayout subclass that accepts input events
-    """
-    def on_event(self, event):
-        if event.event_type == 'key_down':
-            if event.event_value == 'TK_DOWN':
-                self.scroll_by((0, 1))
-            elif event.event_value == 'TK_UP':
-                self.scroll_by((0, -1))
-            elif event.event_value == 'TK_RIGHT':
-                self.scroll_by((1, 0))
-            elif event.event_value == 'TK_LEFT':
-                self.scroll_by((-1, 0))
-            elif event.event_type == 'TK_SPACE':
-                self.scroll_to((0, 0))
-        super().on_event(event)
-    
-t = BearTerminal(size='45x50', title='Atlas',
+t = BearTerminal(size='46x50', title='Atlas',
                  filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
@@ -90,9 +72,12 @@ for element in sorted(atlas.elements.keys()):
 view_height = y+y_step if y+y_step > 50 else 50
 chars = [[' ' for _ in range(45)] for _ in range(view_height)]
 colors = copy_shape(chars, 'white')
-element_view = InputScrollable(chars, colors, view_size=(45, 50))
+element_view = InputScrollable(chars, colors, view_pos=(0, 0),
+                               view_size=(45, 50))
 for index, widget in enumerate(elements):
     element_view.add_child(widget, positions[index])
 dispatcher.register_listener(element_view, ['tick', 'key_down', 'service'])
-t.add_widget(element_view)
+dispatcher.register_listener(element_view.scrollable,
+                             ['tick', 'service'])
+t.add_widget(element_view, pos=(0, 0))
 loop.run()
