@@ -599,12 +599,13 @@ class InputField(Label):
                     return symbol
             else:
                 return symbol.lower()
+        elif symbol in self.charcodes:
+            if self.shift_pressed and symbol in self.shift_charcodes:
+                return self.shift_charcodes[symbol]
+            else:
+                return self.charcodes[symbol]
         else:
-            if symbol in self.charcodes:
-                if self.shift_pressed and symbol in self.shift_charcodes:
-                    return self.shift_charcodes[symbol]
-                else:
-                    return self.charcodes[symbol]
+            return ''
 
 
 class FPSCounter(Label):
