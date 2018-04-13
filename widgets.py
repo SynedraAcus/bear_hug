@@ -551,7 +551,6 @@ class InputField(Label):
         if self.accept_input and event.event_type == 'key_down':
             # Stripping 'TK_' part
             symbol = event.event_value[3:]
-            # Todo: skip the non-\w keys
             if symbol == 'BACKSPACE':
                 self.text = self.text[:-1]
             elif symbol == 'SHIFT':
