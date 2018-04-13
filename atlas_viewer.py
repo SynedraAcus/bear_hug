@@ -4,7 +4,7 @@ from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape
 from event import BearEventDispatcher
 from widgets import InputScrollable, ClosingListener, Listener, Layout,\
-    Label, Widget
+    Label, Widget, FPSCounter
 from resources import XpLoader, Atlas
 
 
@@ -43,7 +43,7 @@ class ElementBox(Layout):
         return chars, colors
 
     
-t = BearTerminal(size='46x50', title='Atlas',
+t = BearTerminal(size='46x52', title='Atlas',
                  filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
@@ -55,15 +55,15 @@ atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
 elements = []
 positions = []
 names = []
-x = 0
-y = 0
+x = 1
+y = 1
 y_step = 0
 for element in sorted(atlas.elements.keys()):
     w = ElementBox(Widget(*atlas.get_element(element)), name=element)
     elements.append(w)
     if x + w.width > 45:
         y += y_step
-        x = 0
+        x = 1
         y_step = 0
     positions.append((x, y))
     x += w.width + 1
@@ -73,11 +73,12 @@ view_height = y+y_step if y+y_step > 50 else 50
 chars = [[' ' for _ in range(45)] for _ in range(view_height)]
 colors = copy_shape(chars, 'white')
 element_view = InputScrollable(chars, colors, view_pos=(0, 0),
-                               view_size=(45, 50))
+                               view_size=(45, 50), right_bar=True)
 for index, widget in enumerate(elements):
     element_view.add_child(widget, positions[index])
 dispatcher.register_listener(element_view, ['tick', 'key_down', 'service'])
 dispatcher.register_listener(element_view.scrollable,
                              ['tick', 'service'])
 t.add_widget(element_view, pos=(0, 0))
+t.add_widget(FPSCounter(), pos=(0, 51))
 loop.run()

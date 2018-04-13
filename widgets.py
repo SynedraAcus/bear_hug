@@ -431,48 +431,74 @@ class InputScrollable(Layout):
         # Scrollable is initalized before self to avoid damaging it by the
         # modified view_size (in case of scrollbars)
         scrollable = ScrollableLayout(chars, colors, view_pos, view_size)
+        size = list(view_size)
+        ch = slice_nested(chars, view_pos, size)
+        co = slice_nested(colors, view_pos, size)
+        # Is there something more reasonable to add as ScrollableLayout BG?
+        # It shouldn't be shown anyway
         if bottom_bar:
-            view_size[0] += 1
+            ch.append(copy_shape(ch[0], ch[0][0]))
+            co.append(copy_shape(co[0], co[0][0]))
         if right_bar:
-            view_size[1] += 1
-        ch = slice_nested(chars, view_pos, view_size)
-        co = slice_nested(colors, view_pos, view_size)
+            for x in ch:
+                x.append(' ')
+            for x in co:
+                x.append('white')
         # While True, can add children to self. Otherwise they are passed to
         # self.scrollable
         self.building_self = True
         super().__init__(ch, co)
         self.scrollable = scrollable
-        self.right_bar = None
-        self.bottom_bar = None
-        self.add_child(self.scrollable, pos=(0, 0), pass_to_scrollable=False)
+        self.add_child(self.scrollable, pos=(0, 0))
+        # Need to rebuild now to let bars know the correct height and width
+        self._rebuild_self()
         if right_bar:
-            self.right_bar = 1
+            self.right_bar = ScrollBar(orientation='vertical',
+                                       length=self.height)
+            self.add_child(self.right_bar, pos=(self.width-1, 0))
+        else:
+            self.right_bar = None
         if bottom_bar:
-            self.bottom_bar = 1
+            self.bottom_bar = ScrollBar(orientation='horizontal',
+                                        length=self.width)
+            self.add_child(self.bottom_bar, pos=(0, self.height-1))
         self.building_self = False
         
     # TODO: accept mouse wheel and drag scroll
     def on_event(self, event):
         if event.event_type == 'key_down':
+            scrolled = False
             if event.event_value == 'TK_DOWN' and \
               self.scrollable.view_pos[1] + self.scrollable.view_size[1]\
                     < len(self.scrollable._child_pointers):
                 self.scrollable.scroll_by((0, 1))
+                scrolled = True
             elif event.event_value == 'TK_UP' and \
              self.scrollable.view_pos[1] > 0:
                 self.scrollable.scroll_by((0, -1))
+                scrolled = True
             elif event.event_value == 'TK_RIGHT' and \
               self.scrollable.view_pos[0] + self.scrollable.view_size[0]\
                     < len(self.scrollable._child_pointers[0]):
                 self.scrollable.scroll_by((1, 0))
+                scrolled = True
             elif event.event_value == 'TK_LEFT' and \
               self.scrollable.view_pos[0] > 0:
                 self.scrollable.scroll_by((-1, 0))
+                scrolled = True
             elif event.event_type == 'TK_SPACE':
                 self.scrollable.scroll_to((0, 0))
+                scrolled = True
+            if scrolled:
+                if self.right_bar:
+                    self.right_bar.show_pos(
+                        self.scrollable.view_pos[1] /
+                            len(self.scrollable._child_pointers),
+                        self.scrollable.view_size[0] /
+                            len(self.scrollable._child_pointers))
         super().on_event(event)
 
-    def add_child(self, child, pos, skip_checks=False, pass_to_scrollable=True):
+    def add_child(self, child, pos, skip_checks=False):
         if not self.building_self:
             self.scrollable.add_child(child, pos, skip_checks)
         else:
