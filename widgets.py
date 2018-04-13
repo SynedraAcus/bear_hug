@@ -41,7 +41,9 @@ class Widget:
         self.colors = colors
         # A widget may want to know about the terminal it's attached to
         self._terminal = None
-    
+        # Or a parent
+        self._parent = None
+        
     def on_event(self, event):
         # Root widget does not raise anything here, because Widget() can be
         # erroneously subscribed to a queue. While useless, that's not really a
@@ -54,10 +56,21 @@ class Widget:
     
     @terminal.setter
     def terminal(self, value):
-        if not isinstance(value, BearTerminal):
+        if value and not isinstance(value, BearTerminal):
             raise BearException('Only a BearTerminal can be set as ' +
                                 'Widget.terminal')
         self._terminal = value
+        
+    @property
+    def parent(self):
+        return self._parent
+    
+    @parent.setter
+    def parent(self, value):
+        if value and not isinstance(value, (Widget, BearTerminal)):
+            raise BearException(
+                'Only a widget or terminal can be a widget\'s parent')
+        self._parent = value
         
     def flip(self, axis):
         """
@@ -117,6 +130,21 @@ class Layout(Widget):
         # case someone wants to add background later
         w = Widget(self.chars, self.colors)
         self.add_child(w, pos=(0, 0))
+    
+    @property
+    def terminal(self):
+        return self._terminal
+    
+    # This setter propagates the terminal value to all the Layout's children.
+    # It's necessary because some of them may be added before placing Layout on
+    # the screen and thus end up terminal-less.
+    @terminal.setter
+    def terminal(self, value):
+        if value and not isinstance(value, BearTerminal):
+            raise BearException('Only BearTerminal can be added as terminal')
+        self._terminal = value
+        for child in self.children:
+            child.terminal = value
         
     # Operations on children
     def add_child(self, child, pos, skip_checks = False):
@@ -142,6 +170,8 @@ class Layout(Widget):
             raise BearLayoutException('Cannot add Layout as its own child')
         self.children.append(child)
         self.child_locations[child] = pos
+        child.terminal = self.terminal
+        child.parent = self
         for y in range(len(child.chars)):
             for x in range(len(child.chars[0])):
                 self._child_pointers[pos[1] + y][pos[0] + x].append(child)
@@ -166,6 +196,8 @@ class Layout(Widget):
         if remove_completely:
             del(self.child_locations[child])
             self.children.remove(child)
+            child.terminal = None
+            child.parent = None
     
     def move_child(self, child, new_pos):
         self.remove_child(child, remove_completely=False)
@@ -221,7 +253,10 @@ class Layout(Widget):
         """
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
-            self.terminal.update_widget(self)
+            # print(type(self.parent))
+            if isinstance(self.parent, BearTerminal):
+                # print('Updating')
+                self.terminal.update_widget(self)
     
     #Service
     def get_absolute_pos(self, relative_pos):
@@ -356,7 +391,7 @@ class SimpleAnimationWidget(Widget):
                 self.have_waited = 0
                 if self.emit_ecs:
                     return BearEvent(event_type='ecs_update')
-        elif self.terminal and event.event_type == 'service' \
+        elif self.parent is self.terminal and event.event_type == 'service' \
                 and event.event_value == 'tick_over':
             # This widget is connected to the terminal directly and must update
             # itself without a layout
@@ -516,7 +551,7 @@ class InputField(Label):
         if self.accept_input and event.event_type == 'key_down':
             # Stripping 'TK_' part
             symbol = event.event_value[3:]
-            # Blocking input if it's too long
+            # Todo: skip the non-\w keys
             if symbol == 'BACKSPACE':
                 self.text = self.text[:-1]
             elif symbol == 'SHIFT':
@@ -571,6 +606,7 @@ class InputField(Label):
                 else:
                     return self.charcodes[symbol]
 
+
 class FPSCounter(Label):
     """
     A simple widget that measures FPS.
@@ -595,7 +631,7 @@ class FPSCounter(Label):
         if event.event_type == 'tick':
             self.samples_deque.append(event.event_value)
             self._update_self()
-            if self.terminal:
+            if self.parent is self.terminal:
                 self.terminal.update_widget(self)
 
 
@@ -616,11 +652,12 @@ class MousePosWidget(Label):
         if event.event_type == 'misc_input' and \
                      event.event_value == 'TK_MOUSE_MOVE':
             self.text = self.get_mouse_line()
-        if self in self.terminal._widget_pointers:
+        if isinstance(self.parent, BearTerminal):
             self.terminal.update_widget(self)
 
     def get_mouse_line(self):
         if not self.terminal:
+            print(self.parent, self.terminal)
             raise BearException('MousePosWidget is not connected to a terminal')
         x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
         y = str(self.terminal.check_state('TK_MOUSE_Y')).rjust(3, '0')

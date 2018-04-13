@@ -81,11 +81,6 @@ class ECSLayout(Layout):
                                    event_value=(entity_id, None)))
             else:
                 collided = set()
-                # TODO: this is a complete mess. Refactor sometime later
-                # Maybe give the ECSLayout its own child_pointers that stores
-                # ids instead of pointers themselves. The memory cost will be
-                # negligible, but it'll save some cycles on the lookup and
-                # make this check a bit more reasonable
                 for y_offset in range(self.entities[entity_id].widget.size[1]):
                     for x_offset in range(self.entities[entity_id].widget.size[0]):
                         for other_widget in self._child_pointers[y+y_offset]\

@@ -42,7 +42,7 @@ class Firework(Widget):
                 self.chars[self.asterisks[index][0]][self.asterisks[index][1]] = '*'
                 self.colors[self.asterisks[index][0]][self.asterisks[index][1]] = \
                         random.choice(('red', 'blue', 'white'))
-                if self.terminal:
+                if self.parent is self.terminal:
                     self.terminal.update_widget(self)
                 self.ticks_skipped = 0
 
@@ -111,15 +111,6 @@ class DevMonitor(Layout):
         self.mouser = MousePosWidget()
         dispatcher.register_listener(self.mouser, ['tick', 'misc_input'])
         self.add_child(self.mouser, (2, 7))
-        
-    @property
-    def terminal(self):
-        return self._terminal
-    
-    @terminal.setter
-    def terminal(self, value):
-        self.mouser.terminal = value
-        self._terminal = value
 
 
 class InputScrollable(ScrollableLayout):
@@ -188,6 +179,7 @@ dispatcher.register_listener(in_field, ['key_down', 'key_up'])
 
 t.start()
 t.add_widget(in_field, pos=(1, 1), layer=25)
+print(type(in_field.parent))
 t.add_widget(monitor, pos=(0, 35), layer=1)
 t.add_widget(box, (12, 35), layer=1)
 t.add_widget(lamp, (43, 1), layer=2)

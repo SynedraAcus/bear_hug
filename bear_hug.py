@@ -230,8 +230,10 @@ class BearTerminal:
             for x in range(len(widget.chars[0])):
                 if self._widget_pointers[layer] and \
                         self._widget_pointers[layer][pos[0] + x][pos[1] + y]:
-                    raise BearException('Drawables cannot collide within a layer')
+                    raise BearException('Widgets cannot collide within a layer')
         widget.terminal = self
+        widget.parent = self
+        print(widget, widget.parent)
         self.widget_locations[widget] = WidgetLocation(pos=pos, layer=layer)
         terminal.layer(layer)
         if not self._widget_pointers[layer]:
@@ -260,6 +262,8 @@ class BearTerminal:
         if refresh:
             self.refresh()
         del(self.widget_locations[widget])
+        widget.terminal = None
+        widget.parent = None
         
     def move_widget(self, widget, pos, refresh=False):
         """
