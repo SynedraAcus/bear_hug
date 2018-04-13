@@ -226,8 +226,8 @@ class BearTerminal:
         """
         if widget in self.widget_locations.keys():
             raise BearException('Cannot add the same widget twice')
-        for y in range(len(widget.chars)):
-            for x in range(len(widget.chars[0])):
+        for y in range(widget.height):
+            for x in range(widget.width):
                 if self._widget_pointers[layer] and \
                         self._widget_pointers[layer][pos[0] + x][pos[1] + y]:
                     raise BearException('Widgets cannot collide within a layer')
@@ -254,7 +254,7 @@ class BearTerminal:
         """
         corner = self.widget_locations[widget].pos
         terminal.layer(self.widget_locations[widget].layer)
-        terminal.clear_area(*corner, len(widget.chars[0]), len(widget.chars))
+        terminal.clear_area(*corner, widget.width, widget.height)
         for y in range(len(widget.chars)):
             for x in range(len(widget.chars[0])):
                 self._widget_pointers[self.widget_locations[widget].layer]\
@@ -290,8 +290,8 @@ class BearTerminal:
         pos = self.widget_locations[widget].pos
         layer = self.widget_locations[widget].layer
         running_color = self.default_color
-        for y in range(len(widget.chars)):
-            for x in range(len(widget.chars[y])):
+        for y in range(widget.height):
+            for x in range(widget.width):
                 # Widget can have None as color for its empty cells
                 if widget.colors[y][x] and widget.colors[y][x] != running_color:
                     running_color = widget.colors[y][x]

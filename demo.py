@@ -29,7 +29,7 @@ class Firework(Widget):
         super().__init__(chars, colors, **kwargs)
         self.ticks_to_wait = freq
         self.ticks_skipped = 0
-        self.size = size
+        self.firework_size = size
     
     def on_event(self, event):
         if event.event_type == 'tick':
@@ -37,8 +37,8 @@ class Firework(Widget):
             if self.ticks_skipped >= self.ticks_to_wait:
                 index = random.randint(0, len(self.asterisks)-1)
                 self.chars[self.asterisks[index][0]][self.asterisks[index][1]] = ' '
-                self.asterisks[index] = (random.randint(0, self.size-1),
-                                         random.randint(0, self.size-1))
+                self.asterisks[index] = (random.randint(0, self.firework_size-1),
+                                         random.randint(0, self.firework_size-1))
                 self.chars[self.asterisks[index][0]][self.asterisks[index][1]] = '*'
                 self.colors[self.asterisks[index][0]][self.asterisks[index][1]] = \
                         random.choice(('red', 'blue', 'white'))

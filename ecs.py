@@ -70,6 +70,7 @@ class Component(Listener):
     them.
     """
     def __init__(self, dispatcher, name='Root component', owner=None):
+        super().__init__()
         if not name:
             raise BearECSException('Cannot create a component without a name')
         self.dispatcher = dispatcher
@@ -83,6 +84,7 @@ class Component(Listener):
         
         This is only useful if the component is passed from one owner to
         another, or if the component is created with the `owner` argument.
+        This method calls owner's `add_component`
         :param owner:
         :return:
         """
@@ -104,10 +106,11 @@ class WidgetComponent(Component):
     """
     Widget as a component.
     
-    This component is responsible for drawing stuff on the screen. Since Widgets
+    This component is an ECS wrapper around the Widget object. Since Widgets
     can accept events and it is sometimes reasonable to keep some event logic in
     the Widget instead of Components (ie to keep animation running), its
-    `on_event` method simply passes the events to the Widget
+    `on_event` method simply passes the events to the Widget. It also supports
+    `height`, `width` and `size` properties, also by calling widget's ones.
     """
     
     def __init__(self, dispatcher, widget, owner=None):
@@ -115,11 +118,25 @@ class WidgetComponent(Component):
             raise TypeError('A widget is not actually a Widget')
         super().__init__(dispatcher=dispatcher, name='widget', owner=owner)
         self.widget = widget
-        self.size = (len(self.widget.chars[0]), len(self.widget.chars))
         if self.dispatcher:
             self.dispatcher.register_listener(self.widget, 'tick')
-        
-        
+
+    def on_event(self, event):
+        return self.widget.on_event(event)
+
+    @property
+    def height(self):
+        return self.widget.height
+
+    @property
+    def width(self):
+        return self.widget.width
+
+    @property
+    def size(self):
+        return self.widget.size
+
+
 class PositionComponent(Component):
     """
     A component responsible for positioning Widget on ECSLayout.
