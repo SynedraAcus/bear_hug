@@ -72,6 +72,7 @@ class Widget:
                 'Only a widget or terminal can be a widget\'s parent')
         self._parent = value
         
+        
     def flip(self, axis):
         """
         Flip a widget along one of the axes.
