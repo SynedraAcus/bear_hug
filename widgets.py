@@ -72,6 +72,17 @@ class Widget:
                 'Only a widget or terminal can be a widget\'s parent')
         self._parent = value
         
+    @property
+    def height(self):
+        return len(self.chars)
+    
+    @property
+    def width(self):
+        return len(self.chars[0])
+    
+    @property
+    def size(self):
+        return len(self.chars[0]), len(self.chars)
         
     def flip(self, axis):
         """
@@ -159,7 +170,7 @@ class Layout(Widget):
         """
         if not isinstance(child, Widget):
             raise BearLayoutException('Cannot add non-Widget to a Layout')
-        if child in self.children:
+        if child in self.children and not skip_checks:
             raise BearLayoutException('Cannot add the same widget to layout twice')
         if len(child.chars) > len(self._child_pointers) or \
                 len(child.chars[0]) > len(self._child_pointers[0]):
