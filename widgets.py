@@ -265,9 +265,7 @@ class Layout(Widget):
         """
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
-            # print(type(self.parent))
             if isinstance(self.parent, BearTerminal):
-                # print('Updating')
                 self.terminal.update_widget(self)
     
     #Service
@@ -295,8 +293,8 @@ class ScrollableLayout(Layout):
     def __init__(self, chars, colors,
                  view_pos=(0,0), view_size=(10, 10)):
         super().__init__(chars, colors)
-        if not 0 <= view_pos[0] <= len(chars[0]) - view_size[0] \
-                or not 0 <= view_pos[1] <= len(chars) - view_size[1]:
+        if not 0 <= view_pos[0] <= self.width - view_size[0] \
+                or not 0 <= view_pos[1] <= self.height - view_size[1]:
             raise BearLayoutException('Initial viewpoint outside ' +
                                       'ScrollableLayout')
         if not 0 < view_size[0] <= len(chars[0]) \
@@ -669,7 +667,6 @@ class MousePosWidget(Label):
 
     def get_mouse_line(self):
         if not self.terminal:
-            print(self.parent, self.terminal)
             raise BearException('MousePosWidget is not connected to a terminal')
         x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
         y = str(self.terminal.check_state('TK_MOUSE_Y')).rjust(3, '0')
