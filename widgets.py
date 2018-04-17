@@ -505,6 +505,19 @@ class InputScrollable(Layout):
             
 
 # Animations and other complex decorative Widgets
+class Animation:
+    """
+    A data class for animation, ie the sequence of the frames
+    """
+    def __init__(self, frames, fps):
+        if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
+                or not all(
+            (shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
+            raise BearException('Frames should be equal size')
+        self.frames = frames
+        self.frame_time = 1 / fps
+
+
 class SimpleAnimationWidget(Widget):
     """
     A simple animated widget that cycles through the frames.
@@ -518,14 +531,12 @@ class SimpleAnimationWidget(Widget):
     this event is emitted or something else causes ECSLayout to redraw
     """
     
-    def __init__(self, frames, fps, emit_ecs = False):
-        super().__init__(*frames[0])
-        if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
-                or not all(
-            (shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
-            raise BearException('Frames should be equal size')
-        self.frames = frames
-        self.frame_time = 1 / fps
+    def __init__(self, animation, emit_ecs = False):
+        if not isinstance(animation, Animation):
+            raise BearException(
+                'Only Animation instance can be used in SimpleAnimationWidget')
+        self.animation = animation
+        super().__init__(*animation.frames[0])
         self.running_index = 0
         self.have_waited = 0
         self.emit_ecs = emit_ecs
@@ -533,12 +544,12 @@ class SimpleAnimationWidget(Widget):
     def on_event(self, event):
         if event.event_type == 'tick':
             self.have_waited += event.event_value
-            if self.have_waited >= self.frame_time:
+            if self.have_waited >= self.animation.frame_time:
                 self.running_index += 1
-                if self.running_index >= len(self.frames):
+                if self.running_index >= len(self.animation.frames):
                     self.running_index = 0
-                self.chars = self.frames[self.running_index][0]
-                self.colors = self.frames[self.running_index][1]
+                self.chars = self.animation.frames[self.running_index][0]
+                self.colors = self.animation.frames[self.running_index][1]
                 self.have_waited = 0
                 if self.emit_ecs:
                     return BearEvent(event_type='ecs_update')
@@ -547,7 +558,15 @@ class SimpleAnimationWidget(Widget):
             # This widget is connected to the terminal directly and must update
             # itself without a layout
             self.terminal.update_widget(self)
-            
+
+
+class MultipleAnimationWidget(Widget):
+    """
+    A widget that is able to display multiple animations.
+    """
+    def __init__(self, animations, initial_animation):
+        # Check the animations' validity
+        pass
 
 # Functional widgets. Please note that these include no decoration, BG, frame or
 # anything else. Ie Label is just a chunk of text on the screen, FPSCounter and

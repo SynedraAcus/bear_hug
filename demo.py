@@ -10,7 +10,8 @@ from bear_utilities import copy_shape
 from event import BearEventDispatcher
 from resources import Atlas, TxtLoader, XpLoader
 from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
-    MousePosWidget, SimpleAnimationWidget, ScrollableLayout, InputField
+    MousePosWidget, SimpleAnimationWidget, ScrollableLayout, InputField,\
+    Animation
 
 
 class Firework(Widget):
@@ -162,8 +163,9 @@ monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
 
 # Barrel, an animation test
-barrel = SimpleAnimationWidget((atlas.get_element('barrel_1'),
+anim = Animation((atlas.get_element('barrel_1'),
                                 atlas.get_element('barrel_2')), 2)
+barrel = SimpleAnimationWidget(anim)
 dispatcher.register_listener(barrel, ['tick', 'service'])
 
 # A ScrollableLayout test
