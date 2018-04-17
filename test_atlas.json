@@ -70,9 +70,23 @@
     "ysize": 3
   },
   {
-    "name": "bullet",
+    "name": "bullet_1",
     "x": 8,
     "y": 10,
+    "xsize": 2,
+    "ysize": 1
+  },
+  {
+    "name": "bullet_2",
+    "x": 8,
+    "y": 11,
+    "xsize": 2,
+    "ysize": 1
+  },
+  {
+    "name": "bullet_3",
+    "x": 8,
+    "y": 12,
     "xsize": 2,
     "ysize": 1
   },
