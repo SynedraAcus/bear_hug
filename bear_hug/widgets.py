@@ -5,11 +5,11 @@ for simpler games and apps. However, for the sake of clearer architecture,
 entities are recommended.
 """
 
-from bear_hug.bear_hug import BearTerminal
-from bear_hug.bear_utilities import shapes_equal, blit, copy_shape, slice_nested,\
+from bear_hug import BearTerminal
+from bear_utilities import shapes_equal, blit, copy_shape, slice_nested,\
     BearException, BearLayoutException
 from collections import deque
-from bear_hug.event import BearEvent
+from event import BearEvent
 from time import time
 
 

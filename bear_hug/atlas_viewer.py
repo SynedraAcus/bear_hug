@@ -1,11 +1,11 @@
 #! /usr/bin/env python3.6
 
-from bear_hug.bear_hug import BearTerminal, BearLoop
-from bear_hug.bear_utilities import copy_shape
-from bear_hug.event import BearEventDispatcher
-from bear_hug.widgets import InputScrollable, ClosingListener, Layout,\
+from bear_hug import BearTerminal, BearLoop
+from bear_utilities import copy_shape
+from event import BearEventDispatcher
+from widgets import InputScrollable, ClosingListener, Layout,\
     Label, Widget, FPSCounter
-from bear_hug.resources import XpLoader, Atlas
+from resources import XpLoader, Atlas
 
 
 class ElementBox(Layout):
@@ -51,8 +51,8 @@ dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 t.start()
 
 
-atlas = Atlas(XpLoader('bear_hug/demo_assets/test_atlas.xp'),
-              'bear_hug/demo_assets/test_atlas.json')
+atlas = Atlas(XpLoader('demo_assets/test_atlas.xp'),
+              'demo_assets/test_atlas.json')
 elements = []
 positions = []
 names = []

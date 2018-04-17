@@ -4,9 +4,9 @@ art and widget-like behaviour.
 """
 
 from bearlibterminal import terminal
-from bear_hug.bear_utilities import BearException,\
+from bear_utilities import BearException,\
     BearLoopException
-from bear_hug.event import BearEvent
+from event import BearEvent
 
 import time
 from copy import copy
@@ -180,7 +180,7 @@ class BearTerminal:
         # Probably in __init__ kwargs, although IMMS 'font' command family
         # has some weird quirks
         terminal.set(
-            'font: ./bear_hug/demo_assets/cp437_12x12.png, size=12x12, codepage=437')
+            'font: demo_assets/cp437_12x12.png, size=12x12, codepage=437')
         if self.outstring:
             terminal.set(self.outstring)
         self.refresh()
@@ -236,7 +236,6 @@ class BearTerminal:
                     raise BearException('Widgets cannot collide within a layer')
         widget.terminal = self
         widget.parent = self
-        print(widget, widget.parent)
         self.widget_locations[widget] = WidgetLocation(pos=pos, layer=layer)
         terminal.layer(layer)
         if not self._widget_pointers[layer]:

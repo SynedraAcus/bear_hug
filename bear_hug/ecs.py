@@ -13,9 +13,9 @@ event_value. When this event is emitted, the entity should be ready to work,
 in particular, all its components should be subscribed to the appropriate events
 """
 
-from bear_hug.bear_utilities import BearECSException
-from bear_hug.widgets import Widget, Listener
-from bear_hug.event import BearEvent
+from bear_utilities import BearECSException
+from widgets import Widget, Listener
+from event import BearEvent
 
 
 class Entity:
