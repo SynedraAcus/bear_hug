@@ -10,9 +10,11 @@ from ecs_widgets import ECSLayout
 from event import BearEventDispatcher, BearEvent
 from resources import Atlas, XpLoader
 from widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
-    Layout, LoggingListener, SimpleAnimationWidget
+    Layout, LoggingListener, SimpleAnimationWidget, Animation,\
+    MultipleAnimationWidget
 
 import sys
+
 
 class DevMonitor(Layout):
     """
@@ -67,13 +69,15 @@ class WalkerComponent(PositionComponent):
         super().on_event(event)
 
 
-def create_bullet():
+def create_bullet(atlas):
     """
     Create a bullet
     :return:
     """
     bullet_entity = Entity(id='bullet')
-    widget = Widget([['-', '*']], [['red', 'red']])
+    bullet_fat = Animation((atlas.get_element('bullet_2'),
+                           atlas.get_element('bullet_3')), 4)
+    widget = MultipleAnimationWidget({'a': bullet_fat}, 'a', cycle=True)
     widget_component = WidgetComponent(None, widget, owner=bullet_entity)
     dispatcher.register_listener(widget_component, 'tick')
     position = PositionComponent(None, vx=50, vy=0, owner=bullet_entity)
@@ -92,7 +96,7 @@ def create_cop(atlas, dispatcher, x, y):
     widget_component = WidgetComponent(dispatcher, widget, owner=punk_entity)
     position_component = WalkerComponent(dispatcher, x=x, y=y,
                                          owner=punk_entity)
-    spawner = SpawnerComponent(dispatcher, create_bullet,
+    spawner = SpawnerComponent(dispatcher, lambda: create_bullet(atlas),
                                relative_pos=(13, 5),
                                owner=punk_entity)
     dispatcher.add_event(BearEvent(event_type='ecs_create',
@@ -103,9 +107,9 @@ def create_cop(atlas, dispatcher, x, y):
 
 def create_barrel(atlas, dispatcher, x, y):
     barrel_entity = Entity(id='Barrel')
-    widget = SimpleAnimationWidget((atlas.get_element('barrel_1'),
-                                    atlas.get_element('barrel_2')), 2,
-                                   emit_ecs= True)
+    widget = SimpleAnimationWidget(Animation((atlas.get_element('barrel_1'),
+                                    atlas.get_element('barrel_2')), 2),
+                                    emit_ecs= True)
     widget_component = WidgetComponent(dispatcher, widget, owner=barrel_entity)
     position_component = PositionComponent(dispatcher, x=x, y=y,
                                            owner=barrel_entity)

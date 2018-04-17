@@ -597,10 +597,11 @@ class MultipleAnimationWidget(Widget):
                 self.have_waited += event.event_value
                 if self.have_waited >= self.animation.frame_time:
                     self.running_index += 1
-                    if self.running_index >= len(self.animation) and self.cycle:
-                        self.running_index = 0
-                    else:
-                        self.am_running = False
+                    if self.running_index >= len(self.animation):
+                        if self.cycle:
+                            self.running_index = 0
+                        else:
+                            self.am_running = False
                     self.chars = self.animation.frames[self.running_index][0]
                     self.colors = self.animation.frames[self.running_index][1]
                     self.have_waited = 0
