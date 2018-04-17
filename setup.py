@@ -7,7 +7,7 @@ setup(
   author = 'Alexey Morozov',
   author_email = 'alexeymorozov1991@gmail.com',
   url = 'https://github.com/SynedraAcus/bear_hug', # use the URL to the github repo
-  download_url = 'https://github.com/peterldowns/mypackage/archive/0.1.tar.gz', # I'll explain this in a second
+  download_url = 'https://github.com/SynedraAcus/bear_hug/archive/0.0.1.tar.gz', # I'll explain this in a second
   keywords = ['gamedev', 'ascii', 'ASCII'],
   license='MIT',
   install_requires=['bearlibterminal'],
