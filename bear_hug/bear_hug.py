@@ -4,9 +4,9 @@ art and widget-like behaviour.
 """
 
 from bearlibterminal import terminal
-from bear_utilities import BearException,\
+from bear_hug.bear_utilities import BearException,\
     BearLoopException
-from event import BearEvent
+from bear_hug.event import BearEvent
 
 import inspect
 import os
