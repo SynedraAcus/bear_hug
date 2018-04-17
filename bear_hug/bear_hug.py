@@ -8,6 +8,8 @@ from bear_utilities import BearException,\
     BearLoopException
 from event import BearEvent
 
+import inspect
+import os
 import time
 from copy import copy
 
@@ -177,10 +179,11 @@ class BearTerminal:
         """
         terminal.open()
         #TODO: write a proper font loader for terminal.
-        # Probably in __init__ kwargs, although IMMS 'font' command family
-        # has some weird quirks
+        # Hopefully system-independent synonym of ./demo_assets/cp437_12x12.png
+        path = os.path.dirname(inspect.stack()[0][1]) + os.path.sep +\
+               'demo_assets' + os.path.sep + 'cp437_12x12.png'
         terminal.set(
-            'font: demo_assets/cp437_12x12.png, size=12x12, codepage=437')
+            'font: {}, size=12x12, codepage=437'.format(path))
         if self.outstring:
             terminal.set(self.outstring)
         self.refresh()

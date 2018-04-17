@@ -7,6 +7,7 @@ from widgets import InputScrollable, ClosingListener, Layout,\
     Label, Widget, FPSCounter
 from resources import XpLoader, Atlas
 
+import os
 
 class ElementBox(Layout):
     """
@@ -51,8 +52,8 @@ dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 t.start()
 
 
-atlas = Atlas(XpLoader('demo_assets/test_atlas.xp'),
-              'demo_assets/test_atlas.json')
+atlas = Atlas(XpLoader(os.path.dirname(__file__)+'/demo_assets/test_atlas.xp'),
+              os.path.dirname(__file__)+'/demo_assets/test_atlas.json')
 elements = []
 positions = []
 names = []
