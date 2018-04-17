@@ -1,4 +1,4 @@
-#! /usr/bin/python3.6
+#! /usr/bin/env python3.6
 
 from bear_hug import BearTerminal, BearLoop
 from bear_utilities import copy_shape

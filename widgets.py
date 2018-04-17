@@ -290,7 +290,6 @@ class ScrollBar(Widget):
     
     Does not accept input
     """
-    # TODO: actually use the scrollbar in InputLayout
     def __init__(self, orientation='vertical', length=10,
                  colors=('gray', 'white')):
         if orientation not in ('vertical', 'horizontal'):
