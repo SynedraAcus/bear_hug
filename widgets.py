@@ -512,10 +512,13 @@ class Animation:
     def __init__(self, frames, fps):
         if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
                 or not all(
-            (shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
+                (shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
             raise BearException('Frames should be equal size')
         self.frames = frames
         self.frame_time = 1 / fps
+
+    def __len__(self):
+        return len(self.frames)
 
 
 class SimpleAnimationWidget(Widget):
@@ -531,7 +534,7 @@ class SimpleAnimationWidget(Widget):
     this event is emitted or something else causes ECSLayout to redraw
     """
     
-    def __init__(self, animation, emit_ecs = False):
+    def __init__(self, animation, emit_ecs=True):
         if not isinstance(animation, Animation):
             raise BearException(
                 'Only Animation instance can be used in SimpleAnimationWidget')
@@ -546,7 +549,7 @@ class SimpleAnimationWidget(Widget):
             self.have_waited += event.event_value
             if self.have_waited >= self.animation.frame_time:
                 self.running_index += 1
-                if self.running_index >= len(self.animation.frames):
+                if self.running_index >= len(self.animation):
                     self.running_index = 0
                 self.chars = self.animation.frames[self.running_index][0]
                 self.colors = self.animation.frames[self.running_index][1]
@@ -564,9 +567,68 @@ class MultipleAnimationWidget(Widget):
     """
     A widget that is able to display multiple animations.
     """
-    def __init__(self, animations, initial_animation):
+    def __init__(self, animations, initial_animation,
+                 emit_ecs=True, cycle=False):
         # Check the animations' validity
-        pass
+        if not isinstance(animations, dict) or \
+                any((not isinstance(x, Animation) for x in animations.values())):
+            raise BearException(
+                'Only dict of Animations acceptable for MultipleAnimationWidget')
+        if any((not isinstance(x, str) for x in animations)):
+            raise BearException('Animation names should be strings')
+        if not initial_animation:
+            raise BearException('Initial animation ID should be provided')
+        if initial_animation not in animations:
+            raise BearException('Incorrect initial animation ID')
+        super().__init__(*animations[initial_animation].frames[0])
+        self.animations = animations
+        self.current_animation = initial_animation
+        self.running_index = 0
+        self.have_waited = 0
+        self.emit_ecs = emit_ecs
+        self.cycle = cycle
+        self.am_running = True
+
+    def on_event(self, event):
+        # When self.am_running is False, this widget does not respond to any
+        # events and acts like a regular passive Widget
+        if self.am_running:
+            if event.event_type == 'tick':
+                self.have_waited += event.event_value
+                if self.have_waited >= self.animation.frame_time:
+                    self.running_index += 1
+                    if self.running_index >= len(self.animation) and self.cycle:
+                        self.running_index = 0
+                    else:
+                        self.am_running = False
+                    self.chars = self.animation.frames[self.running_index][0]
+                    self.colors = self.animation.frames[self.running_index][1]
+                    self.have_waited = 0
+                    if self.emit_ecs:
+                        return BearEvent(event_type='ecs_update')
+            elif self.parent is self.terminal and event.event_type == 'service'\
+                    and event.event_value == 'tick_over':
+                # This widget is connected to the terminal directly and must
+                # update itself without a layout
+                self.terminal.update_widget(self)
+
+    @property
+    def animation(self):
+        return self.animations[self.current_animation]
+
+    def set_animation(self, anim_id, cycle=False):
+        """
+        Set the next animation to be played.
+        :param anim_id: Animation ID. Should be present in self.animations
+        :param cycle: Whether to cycle the animation. Default False.
+        :return:
+        """
+        if anim_id not in self.animations:
+            raise BearException('Incorrect animation ID')
+        self.current_animation = anim_id
+        self.cycle = cycle
+        self.am_running = True
+
 
 # Functional widgets. Please note that these include no decoration, BG, frame or
 # anything else. Ie Label is just a chunk of text on the screen, FPSCounter and
