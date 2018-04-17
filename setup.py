@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 setup(
   name = 'bear_hug',
   packages = ['bear_hug'], # this must be the same as the name above
