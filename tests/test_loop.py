@@ -1,7 +1,7 @@
 # Pytest-compatible tests for loop system
 
 import pytest
-from event import BearEventDispatcher, BearLoopException, BearEvent
+from bear_hug.event import BearEventDispatcher, BearLoopException, BearEvent
 
 @pytest.fixture
 def event_dispatcher():

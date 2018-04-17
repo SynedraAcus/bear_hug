@@ -2,7 +2,7 @@
 Loaders for the various ASCII-art formats
 """
 
-from bear_utilities import BearException, copy_shape, rotate_list
+from bear_hug.bear_utilities import BearException, copy_shape, rotate_list
 from copy import deepcopy
 import base64
 import gzip

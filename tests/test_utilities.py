@@ -1,6 +1,6 @@
 # Tests for bear_utilities
 
-from bear_utilities import *
+from bear_hug.bear_utilities import *
 
 
 def test_shapes():

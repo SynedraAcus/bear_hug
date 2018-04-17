@@ -5,11 +5,11 @@
 
 import random
 
-from bear_hug import BearTerminal, BearLoop
-from bear_utilities import copy_shape
-from event import BearEventDispatcher
-from resources import Atlas, TxtLoader, XpLoader
-from widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
+from bear_hug.bear_hug import BearTerminal, BearLoop
+from bear_hug.bear_utilities import copy_shape
+from bear_hug.event import BearEventDispatcher
+from bear_hug.resources import Atlas, TxtLoader, XpLoader
+from bear_hug.widgets import Widget, FPSCounter, ClosingListener, Label, Layout,\
     MousePosWidget, SimpleAnimationWidget, ScrollableLayout, InputField,\
     Animation
 
@@ -145,20 +145,21 @@ box = FireworkBox([['.' for x in range(38)] for x in range(10)],
 dispatcher.register_listener(box, ['key_down', 'service'])
 
 # A tank, TXTLoader test
-loader = TxtLoader('tank.txt')
+loader = TxtLoader('bear_hug/demo_assets/tank.txt')
 tank1 = Widget(*loader.get_image_region(0, 0, 5, 6))
 tank2 = Widget(*loader.get_image_region(6, 0, 5, 6))
 
 # XPLoader tests
 # A tree without layer2 apples
-xploader = XpLoader('tree_lamp.xp')
+xploader = XpLoader('bear_hug/demo_assets/tree_lamp.xp')
 tree2 = Widget(*xploader.get_layer_region(0, 0, 1, 6, 8))
 # Multilayered tree and single-layered lamp
 tree = Widget(*xploader.get_image_region(0, 1, 6, 8))
 lamp = Widget(*xploader.get_image_region(7, 1, 7, 8))
 
 # Monitor, with BG loaded from XP atlas and widgets added in monitor.__init__
-atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
+atlas = Atlas(XpLoader('bear_hug/demo_assets/test_atlas.xp'),
+              'bear_hug/demo_assets/test_atlas.json')
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
 

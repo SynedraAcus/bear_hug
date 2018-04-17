@@ -1,7 +1,7 @@
 #  Pytest-compatible tests
 import pytest
 
-from bear_hug import BearTerminal, Label, BearException
+from bear_hug.bear_hug import BearTerminal, Label, BearException
 
 @pytest.fixture
 def terminal():

@@ -2,10 +2,10 @@
 A collection of Widgets and Listeners designed specifically for the ECS system.
 """
 
-from bear_utilities import BearECSException, rectangles_collide
-from ecs import Entity
-from event import BearEvent
-from widgets import Layout
+from bear_hug.bear_utilities import BearECSException
+from bear_hug.ecs import Entity
+from bear_hug.event import BearEvent
+from bear_hug.widgets import Layout
 
 
 class ECSLayout(Layout):

@@ -7,9 +7,8 @@ the queue. If a list is returned, the events are added (and will be processed)
 in the same order as they are in that list.
 """
 
-from bear_utilities import BearLoopException, BearException
+from bear_hug.bear_utilities import BearLoopException
 from collections import deque
-from copy import copy
 
 
 class BearEvent:

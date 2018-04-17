@@ -3,13 +3,13 @@
 """
 An ECS test.
 """
-from bear_hug import BearTerminal, BearLoop
-from bear_utilities import copy_shape
-from ecs import Entity, WidgetComponent, PositionComponent, SpawnerComponent
-from ecs_widgets import ECSLayout
-from event import BearEventDispatcher, BearEvent
-from resources import Atlas, XpLoader
-from widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
+from bear_hug.bear_hug import BearTerminal, BearLoop
+from bear_hug.bear_utilities import copy_shape
+from bear_hug.ecs import Entity, WidgetComponent, PositionComponent, SpawnerComponent
+from bear_hug.ecs_widgets import ECSLayout
+from bear_hug.event import BearEventDispatcher, BearEvent
+from bear_hug.resources import Atlas, XpLoader
+from bear_hug.widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
     Layout, LoggingListener, SimpleAnimationWidget, Animation,\
     MultipleAnimationWidget
 
@@ -75,8 +75,10 @@ def create_bullet(atlas):
     :return:
     """
     bullet_entity = Entity(id='bullet')
-    bullet_fat = Animation((atlas.get_element('bullet_2'),
-                           atlas.get_element('bullet_3')), 4)
+    bullet_fat = Animation((atlas.get_element('bullet_1'),
+                           atlas.get_element('bullet_2'),
+                            atlas.get_element('bullet_3'),
+                            atlas.get_element('bullet_2')), 15)
     widget = MultipleAnimationWidget({'a': bullet_fat}, 'a', cycle=True)
     widget_component = WidgetComponent(None, widget, owner=bullet_entity)
     dispatcher.register_listener(widget_component, 'tick')
@@ -124,7 +126,8 @@ t = BearTerminal(size='85x60', title='Brutality',
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
-atlas = Atlas(XpLoader('test_atlas.xp'), 'test_atlas.json')
+atlas = Atlas(XpLoader('bear_hug/demo_assets/test_atlas.xp'),
+              'bear_hug/demo_assets/test_atlas.json')
 chars = [[' ' for x in range(85)] for y in range(50)]
 colors = copy_shape(chars, 'gray')
 layout = ECSLayout(chars, colors)
