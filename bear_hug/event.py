@@ -37,6 +37,7 @@ class BearEventDispatcher:
                             'key_up', # Key or mouse button up
                             'misc_input', # Other input, eg MOUSE_MOVE or CLOSE
                             'text_input', #InputField returns something
+                            'play_sound', # Something requests a sound
                             'service', # To do with queue or engine in general
                             'ecs_create', # A creation of entity
                             'ecs_move', # Movement of entities

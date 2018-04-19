@@ -27,13 +27,59 @@ class SoundListener(Listener):
     
     If sound_name is a known sound ID, this sound is (asynchronously) played.
     Otherwise, BearSoundException is raised. Sounds can be either supplied in a
-    single arg, or added later via register_sound.
+    single arg during creation, or added later via register_sound. In either
+    case, for a sound either a `simpleaudio.WaveObject` or a string is expected.
+    In the latter case, a string is treated as a path to a `.wav` file.
     """
     def __init__(self, sounds):
-        pass
-    
+        if not isinstance(sounds, dict):
+            raise BearSoundException(
+                'Only a dict accepted at SoundListener creation')
+        if any((not isinstance(x, str) for x in sounds)):
+            raise BearSoundException('Only strings accepted as sound IDs')
+        for sound_name in sounds:
+            if isinstance(sounds[sound_name], sa.WaveObject):
+                continue
+            if isinstance(sounds[sound_name], str):
+                sounds[sound_name] =  sa.WaveObject.from_wave_read(
+                    wave.open(sounds[sound_name], 'rb'))
+            else:
+                raise BearSoundException(
+                    'Sound should be either WaveObject or string')
+        self.sounds = sounds
+        
     def register_sound(self, sound, sound_name):
-        pass
+        """
+        Register a new sound for this listener
+        :param sound: WaveObject or str. A sound to be registered
+        :param sound_name: name of this sound.
+        :return:
+        """
+        if sound_name in self.sounds:
+            raise BearSoundException(f'Duplicate sound name "{sound_name}"')
+        if isinstance(sound, sa.WaveObject):
+            self.sounds[sound_name] = sound
+        elif isinstance(sound, str):
+            self.sounds[sound_name] = sa.WaveObject.from_wave_read(
+                    wave.open('dsstnmov.wav', 'rb'))
+        else:
+            raise BearSoundException(
+                'Sound should be either WaveObject or string')
+    
+    def play_sound(self, sound_name):
+        """
+        Play a sound.
+        
+        In case you need to play the sound without requesting it through the
+        event.
+        :param sound_name: A sound to play.
+        :return:
+        """
+        if sound_name not in self.sounds:
+            raise BearSoundException(
+                f'Nonexistent sound {sound_name} requested')
+        self.sounds[sound_name].play()
     
     def on_event(self, event):
-        pass
+        if event.event_type == 'play_sound':
+            self.play_sound(event.event_value)

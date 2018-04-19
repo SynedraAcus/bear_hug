@@ -9,6 +9,7 @@ from bear_hug.ecs import Entity, WidgetComponent, PositionComponent, SpawnerComp
 from bear_hug.ecs_widgets import ECSLayout
 from bear_hug.event import BearEventDispatcher, BearEvent
 from bear_hug.resources import Atlas, XpLoader
+from bear_hug.sound import SoundListener
 from bear_hug.widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
     Layout, LoggingListener, SimpleAnimationWidget, Animation,\
     MultipleAnimationWidget
@@ -51,22 +52,39 @@ class WalkerComponent(PositionComponent):
         self.dispatcher.register_listener(self, ['key_down'])
         
     def on_event(self, event):
+        r = []
         if event.event_type == 'key_down':
             moved = False
             if event.event_value in ('TK_D', 'TK_RIGHT'):
-                self.move(self.x + 1, self.y)
+                self.move(self.x + 1, self.y, emit_event=False)
+                moved = True
             elif event.event_value in ('TK_A', 'TK_LEFT'):
-                self.move(self.x - 1, self.y)
+                self.move(self.x - 1, self.y, emit_event=False)
+                moved = True
             elif event.event_value in ('TK_S', 'TK_DOWN'):
-                self.relative_move(0, 1)
+                self.relative_move(0, 1, emit_event=False)
+                moved = True
             elif event.event_value in ('TK_W', 'TK_UP'):
-                self.relative_move(0, -1)
+                self.relative_move(0, -1, emit_event=False)
+                moved = True
             elif event.event_value in ('TK_SPACE'):
                 self.owner.spawner.create_entity()
+                r.append(BearEvent(event_type='play_sound',
+                                   event_value='shot'))
             if moved:
-                return BearEvent(event_type='ecs_move',
-                                 event_value=(self.owner.id, self.x, self.y))
-        super().on_event(event)
+                # events
+                r.append(BearEvent(event_type='ecs_move',
+                                   event_value=(self.owner.id, self.x, self.y)))
+                r.append(BearEvent(event_type='play_sound',
+                                   event_value='step'))
+        x = super().on_event(event)
+        if x:
+            if isinstance(x, BearEvent):
+                r.append(x)
+            else:
+                #multiple return
+                r += x
+        return r
 
 
 def create_bullet(atlas):
@@ -138,9 +156,12 @@ create_barrel(atlas, dispatcher, 20, 6)
 # Dev monitor, works outside ECS
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher=dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
+# A sound player
+jukebox = SoundListener({'step': 'dshoof.wav', 'shot': 'dsshotgn.wav'})
+dispatcher.register_listener(jukebox, 'play_sound')
 # Logger
 logger = LoggingListener(handle=sys.stderr)
-dispatcher.register_listener(logger, event_types='*ecs')
+dispatcher.register_listener(logger, 'play_sound')
 t.start()
 t.add_widget(monitor, (0, 50), layer=1)
 t.add_widget(layout, (0, 0), layer=1)
