@@ -138,3 +138,7 @@ class BearLayoutException(BearException):
 
 class BearECSException(BearException):
     pass
+
+
+class BearSoundException(BearException):
+    pass

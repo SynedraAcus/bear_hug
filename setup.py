@@ -7,7 +7,7 @@ setup(
   author = 'Alexey Morozov',
   author_email = 'alexeymorozov1991@gmail.com',
   url = 'https://github.com/SynedraAcus/bear_hug',
-  download_url = 'https://github.com/SynedraAcus/bear_hug/archive/0.0.1.tar.gz',
+  download_url = 'https://github.com/SynedraAcus/bear_hug/archive/0.1.tar.gz',
   keywords = ['gamedev', 'ascii', 'ASCII'],
   license = 'MIT',
   python_requires = '>=3.6',
