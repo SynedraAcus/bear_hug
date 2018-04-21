@@ -151,7 +151,8 @@ class BearTerminal:
         'TK_MOUSE_WHEEL': 139, 'TK_F3': 60, 'TK_L': 15, 'TK_KP_PERIOD': 99,
         'TK_J': 13, 'TK_F4': 61}
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, font_path='../demo_assets/cp437_12x12.png',
+                 *args, **kwargs):
         if kwargs:
             if any(x not in self.accepted_kwargs for x in kwargs.keys()):
                 raise BearException('Only bearlibterminal library settings '
@@ -168,6 +169,7 @@ class BearTerminal:
         #  destroyed or resized.
         self._widget_pointers = [None for x in range(256)]
         self.default_color = 'white'
+        self.font_path = font_path
 
     #  Methods that replicate or wrap around blt's functions
 
@@ -180,10 +182,10 @@ class BearTerminal:
         terminal.open()
         #TODO: write a proper font loader for terminal.
         # Hopefully system-independent synonym of ./demo_assets/cp437_12x12.png
-        path = os.path.dirname(inspect.stack()[0][1]) + os.path.sep +\
-               'demo_assets' + os.path.sep + 'cp437_12x12.png'
+        # path = os.path.dirname(inspect.stack()[0][1]) + os.path.sep +\
+        #        'demo_assets' + os.path.sep + 'cp437_12x12.png'
         terminal.set(
-            'font: {}, size=12x12, codepage=437'.format(path))
+            'font: {}, size=12x12, codepage=437'.format(self.font_path))
         if self.outstring:
             terminal.set(self.outstring)
         self.refresh()

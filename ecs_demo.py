@@ -139,7 +139,8 @@ def create_barrel(atlas, dispatcher, x, y):
                                    event_value=('Barrel', x, y)))
 
     
-t = BearTerminal(size='85x60', title='Brutality',
+t = BearTerminal(font_path='bear_hug/demo_assets/cp437_12x12.png',
+                 size='85x60', title='Brutality',
                  filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
