@@ -296,6 +296,8 @@ class BearTerminal:
             raise BearException('Cannot update non-added Widgets')
         pos = self.widget_locations[widget].pos
         layer = self.widget_locations[widget].layer
+        terminal.layer(layer)
+        terminal.clear_area(*self.widget_locations[widget].pos, widget.width, widget.height)
         running_color = self.default_color
         for y in range(widget.height):
             for x in range(widget.width):

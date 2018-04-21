@@ -865,7 +865,7 @@ class FPSCounter(Label):
             self.samples_deque.append(event.event_value)
             self._update_self()
             if self.parent is self.terminal:
-                self.terminal.update_widget(self)
+                self.terminal.update_widget(self, refresh=True)
 
 
 class MousePosWidget(Label):
