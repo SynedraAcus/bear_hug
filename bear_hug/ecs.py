@@ -251,3 +251,43 @@ class SpawnerComponent(Component):
                                             event_value=(entity.id,
                                                          entity.position.x,
                                                          entity.position.y)))
+
+
+class DestructorComponent(Component):
+    """
+    A component responsible for cleanly destroying its entity and everything
+    that has to do with it.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name='destructor', **kwargs)
+        self.is_destroying = False
+        self.dispatcher.register_listener(self, ['service', 'tick'])
+    
+    def destroy(self):
+        """
+        Destruct this component's owner.
+        Unsubscribes owner and all its components from the queue and sends
+        'ecs_remove'. Then all components are deleted. Entity itself is left at
+        the mercy of garbage collector.
+        :return:
+        """
+        self.dispatcher.add_event(BearEvent('ecs_destroy', self.owner.id))
+        self.is_destroying = True
+        # Destroys item on the 'tick_over', so that all
+        # existing events involving owner (including 'ecs_remove' are processed
+        # normally, but unsubscribes it right now to prevent new ones from forming
+        for component in self.owner.components:
+            if component != self.name:
+                self.dispatcher.unregister_listener(
+                    self.owner.__dict__[component])
+    
+    def on_event(self, event):
+        if self.is_destroying and event.event_type == 'tick':
+            # owner.components stores IDs, not component objects themselves.
+            # Those are available only from owner.__dict__
+            victims = [x for x in self.owner.components]
+            for component in victims:
+                if component is not self.name:
+                    self.owner.remove_component(component)
+            self.dispatcher.unregister_listener(self)
+            self.owner.remove_component(self.name)
