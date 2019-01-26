@@ -64,6 +64,21 @@ class ECSLayout(Layout):
             raise BearECSException('Cannot add non-Entity to ECSLayout')
         self.entities[entity.id] = entity
         self.widgets[entity.id] = entity.widget.widget
+    
+    def remove_entity(self, entity_id):
+        """
+        Forget about the registered entity and its widget.
+        Does not imply or cause the destruction of Entity object or any of its
+        Component objects (except if this was the last reference). Making sure
+        that the entity is removed cleanly is someone else's job.
+        :param entity_id:
+        :return:
+        """
+        if entity_id not in self.entities:
+            raise BearECSException('Attempting to remove nonexistent entity {} from ESCLayout'.
+                                   format(entity_id))
+        self.remove_child(self.entities[entity_id].widget.widget)
+        del self.entities[entity_id]
         
     def on_event(self, event):
         # React to the events
@@ -98,8 +113,11 @@ class ECSLayout(Layout):
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
             self.need_redraw = True
+        elif event.event_type == 'ecs_destroy':
+            self.remove_entity(event.event_value)
+            self.need_redraw = True
         elif event.event_type == 'ecs_remove':
-            self.remove_child(self.entities[event.event_value].widget)
+            self.remove_child(self.entities[event.event_value].widget.widget)
             self.need_redraw = True
         elif event.event_type == 'ecs_add':
             entity_id, x, y = event.event_value

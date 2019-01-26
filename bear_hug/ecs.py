@@ -52,7 +52,8 @@ class Entity:
     
     def remove_component(self, component_name):
         if component_name in self.components:
-            del(self.components[component_name])
+            del(self.__dict__[component_name])
+            self.components.remove(component_name)
         else:
             raise BearECSException('Cannot remove component ' +
                           '{} that Entity doesn\'t have'.format(component_name))
