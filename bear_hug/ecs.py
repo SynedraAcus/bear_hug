@@ -205,12 +205,16 @@ class PositionComponent(Component):
                 self.x_waited += event.event_value
                 self.y_waited += event.event_value
                 if self.vx and self.x_waited > self.x_delay:
-                    new_x = self.x + 1 if self.vx > 0 else self.x - 1
+                    new_x = self.x + round(self.x_waited/self.x_delay)\
+                        if self.vx > 0\
+                        else self.x - round(self.x_waited/self.x_delay)
                     self.x_waited = 0
                 else:
                     new_x = self.x
                 if self.vy and self.y_waited > self.y_delay:
-                    new_y = self.y + 1 if self.vy > 0 else self.y - 1
+                    new_y = self.y + round(self.x_waited/self.x_delay)\
+                        if self.vy > 0\
+                        else self.y - round(self.x_waited/self.x_delay)
                     self.y_waited = 0
                 else:
                     new_y = self.y
