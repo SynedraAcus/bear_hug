@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
   name = 'bear_hug',
   packages = ['bear_hug'],
-  version = '0.1.1',
+  version = '0.1.2',
   description = 'An object-oriented ECS library for ASCII games. Wraps bearlibterminal.',
   author = 'Alexey Morozov',
   author_email = 'alexeymorozov1991@gmail.com',

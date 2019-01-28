@@ -45,6 +45,8 @@ class BearEventDispatcher:
                             'ecs_add', # Addition of entity to ECSLayout
                             'ecs_destroy', # Removal of entites from ECSLayout
                             'ecs_remove', # Removal of widgets from ECSLayout
+                            'ecs_scroll_by', #Rel scroll for ScrollableECSLayout
+                            'ecs_scroll_to', #Abs scroll for ScrollableECSLayout
                             'ecs_update' # Someone needs to update ecs screen
                             }
         self.listeners = {x: [] for x in self.event_types}
