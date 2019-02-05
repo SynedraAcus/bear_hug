@@ -86,16 +86,17 @@ class ECSLayout(Layout):
         r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
-            self.move_child(self.widgets[entity_id], (x, y))
-            self.need_redraw = True
             # Checking if collision events need to be emitted
             # Check for collisions with border
-            if x == 0 or x+self.entities[entity_id].widget.size[0]\
-                 == len(self.chars[0]) or y == 0 or \
-                 y + self.entities[entity_id].widget.size[1] == len(self.chars):
+            if x < 0 or x+self.entities[entity_id].widget.size[0]\
+                 > len(self.chars[0]) or y < 0 or \
+                 y + self.entities[entity_id].widget.size[1] > len(self.chars):
                 r.append(BearEvent(event_type='ecs_collision',
                                    event_value=(entity_id, None)))
             else:
+                # Apparently no collision with a border, can safely move
+                self.move_child(self.widgets[entity_id], (x, y))
+                self.need_redraw = True
                 collided = set()
                 for y_offset in range(self.entities[entity_id].widget.size[1]):
                     for x_offset in range(self.entities[entity_id].widget.size[0]):
@@ -277,17 +278,18 @@ class ScrollableECSLayout(Layout):
         r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
-            self.move_child(self.widgets[entity_id], (x, y))
-            self.need_redraw = True
             # Checking if collision events need to be emitted
             # Check for collisions with border
-            if x == 0 or x + self.entities[entity_id].widget.size[0] \
-                    == len(self._child_pointers[0]) or y == 0 or \
-                    y + self.entities[entity_id].widget.size[1] == len(
-                self._child_pointers):
+            if x < 0 or x + self.entities[entity_id].widget.size[0] \
+                    > len(self._child_pointers[0]) or y < 0 or \
+                    y + self.entities[entity_id].widget.size[1] > len(
+                    self._child_pointers):
                 r.append(BearEvent(event_type='ecs_collision',
                                    event_value=(entity_id, None)))
             else:
+                # Apparently no collision with a border, can safely move
+                self.move_child(self.widgets[entity_id], (x, y))
+                self.need_redraw = True
                 collided = set()
                 for y_offset in range(
                         self.entities[entity_id].widget.size[1]):
