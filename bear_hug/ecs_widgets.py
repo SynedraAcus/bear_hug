@@ -282,9 +282,9 @@ class ScrollableECSLayout(Layout):
             # Checking if collision events need to be emitted
             # Check for collisions with border
             if x == 0 or x + self.entities[entity_id].widget.size[0] \
-                    == len(self.chars[0]) or y == 0 or \
+                    == len(self._child_pointers[0]) or y == 0 or \
                     y + self.entities[entity_id].widget.size[1] == len(
-                self.chars):
+                self._child_pointers):
                 r.append(BearEvent(event_type='ecs_collision',
                                    event_value=(entity_id, None)))
             else:
@@ -299,6 +299,8 @@ class ScrollableECSLayout(Layout):
                             # Child_pointers is ECS-agnostic and stores pointers
                             # to the actual widgets
                             collided.add(other_widget)
+                # TODO: optimize to avoid checking all entities in collision detector
+                # Probably just storing all entity ids along with child pointers
                 collided_ent_ids = set()
                 for child in self.entities:
                     if child != entity_id and \
