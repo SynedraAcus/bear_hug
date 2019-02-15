@@ -286,7 +286,7 @@ class DestructorComponent(Component):
                     self.owner.__dict__[component])
     
     def on_event(self, event):
-        if self.is_destroying and event.event_type == 'tick':
+        if self.is_destroying and event.event_type == 'tick_over':
             # owner.components stores IDs, not component objects themselves.
             # Those are available only from owner.__dict__
             victims = [x for x in self.owner.components]

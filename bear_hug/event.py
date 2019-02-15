@@ -15,6 +15,8 @@ class BearEvent:
     """
     Event data class. Has two params: event_type and event_value
     """
+    __slots__ = ('event_type', 'event_value')
+    
     def __init__(self, event_type='tick', event_value=None):
         self.event_type = event_type
         self.event_value = event_value
