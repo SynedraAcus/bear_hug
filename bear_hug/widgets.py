@@ -31,6 +31,7 @@ class Widget:
     `chars` and `colors` should be exactly the same shape, otherwise the
     BearException is raised.
     """
+    #TODO: maybe support background colour after all?
     
     def __init__(self, chars, colors):
         if not isinstance(chars, list) or not isinstance(colors, list):
@@ -277,6 +278,7 @@ class Layout(Widget):
         Build fresh chars and colors for self
         :return:
         """
+        # TODO: Support needs_redraw like in ECSLayout
         chars = copy_shape(self.chars, ' ')
         colors = copy_shape(self.colors, None)
         for line in range(len(chars)):

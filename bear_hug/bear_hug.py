@@ -21,6 +21,8 @@ class BearTerminal:
     Currently only a library settings aresupported and there is no support for
     changing them on the fly, but that's subject to fixing.
     """
+    # TODO: wrap bearlibterminal parameters in @property
+    # TODO: change bearlibterminal parameters on the fly
     # kwargs to init are passed to bearlibterminal.terminal.set()
     # Currently only library settings are supported
     accepted_kwargs = {'encoding': 'terminal', 'size': 'window',
@@ -169,6 +171,7 @@ class BearTerminal:
         #  destroyed or resized.
         self._widget_pointers = [None for x in range(256)]
         self.default_color = 'white'
+        # TODO: make font_path system independent
         self.font_path = font_path
 
     #  Methods that replicate or wrap around blt's functions
@@ -180,10 +183,6 @@ class BearTerminal:
         :return:
         """
         terminal.open()
-        #TODO: write a proper font loader for terminal.
-        # Hopefully system-independent synonym of ./demo_assets/cp437_12x12.png
-        # path = os.path.dirname(inspect.stack()[0][1]) + os.path.sep +\
-        #        'demo_assets' + os.path.sep + 'cp437_12x12.png'
         terminal.set(
             'font: {}, size=12x12, codepage=437'.format(self.font_path))
         if self.outstring:

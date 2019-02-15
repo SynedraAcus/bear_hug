@@ -13,6 +13,11 @@ from bear_hug.widgets import Listener
 import simpleaudio as sa
 import wave
 
+# TODO: support non-WAV sounds
+# Probably easiest way is by moving sound backend into a separate class, while
+# leaving interaction with queue to SoundListener. That way, backends may even
+# be switched on the fly.
+
 
 class SoundListener(Listener):
     """

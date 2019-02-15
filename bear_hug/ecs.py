@@ -233,7 +233,8 @@ class SpawnerComponent(Component):
     :param relative_pos: a starting position of a spawned Entity, relative to
     self.
     """
-    # TODO: accept entity factories
+    # The BRUTALITY project has a better SpawnerComponent, but that one spawns
+    # entities. See brutality/components.py and brutality/entities.py
     def __init__(self, dispatcher, to_spawn, relative_pos=(0, 0), owner=None):
         super().__init__(dispatcher, name='spawner', owner=owner)
         self.to_spawn = to_spawn
