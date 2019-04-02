@@ -64,11 +64,36 @@ class Component(Listener):
     A root component class.
     
     Component name is expected to be the same between all components of the same
-    class.
-    
-    Component inherits from Listener and is therefore able to receive and return
-    BearEvents. Of course, it needs the correct subscriptions to actually get
-    them.
+    class. Component inherits from Listener and is therefore able to receive and
+    return BearEvents. Of course, it needs the correct subscriptions to actually
+    get them.
+
+    `repr(component)` is used for serialization and should generate a valid
+    JSON-encoded dict. It should always include a 'class' key which
+    should equal the class name for that component and will be used by a
+    deserializer to determine what to create. All other keys will be
+    deserialized and treated as kwargs to a newly-created object. To define the
+    deserialization protocol, JSON dict may also contain keys formatted as
+    '{kwarg_name}_type' which should be a string and will be eval-ed as during
+    deserialization. Python's builtin converters (eg `str`, `int` or `float`)
+    are perfectly safe, for the custom ones make sure that they are imported
+    when the component is created.
+    For example, the following is a valid JSON:
+
+    {"class": "TestComponent",
+    "x": 5,
+    "y": 5,
+    "direction": "r",
+    "former_owners": ["asd", "zxc", "qwe"],
+    "former_owners_type": "set"}
+
+    It will be eventually produce a following call:
+    `x = TestComponent(x=5, y=5, direction='r',
+                       former_owners=set(['asd', 'zxc', 'qwe']))
+
+    The following keys are forbidden: 'name', 'owner', 'dispatcher'.
+
+    # TODO: Actually write the serializers
     """
     def __init__(self, dispatcher, name='Root component', owner=None):
         super().__init__()
@@ -103,8 +128,7 @@ class Component(Listener):
         pass
 
     def __repr__(self):
-        pass
-        # TODO: JSON schema for object repr should be here.
+        raise NotImplementedError('Component __repr__ should be overloaded to generate a valid JSON')
 
     def __str__(self):
         owner = self.owner if self.owner else 'nobody'
