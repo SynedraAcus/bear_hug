@@ -102,6 +102,14 @@ class Component(Listener):
         """
         pass
 
+    def __repr__(self):
+        pass
+        # TODO: JSON schema for object repr should be here.
+
+    def __str__(self):
+        owner = self.owner if self.owner else 'nobody'
+        return f'{type(self).__name__} at {id(self)} attached to {owner.id}'
+
 
 class WidgetComponent(Component):
     """
