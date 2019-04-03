@@ -12,6 +12,7 @@ It is the only event type that uses the actual entity object, not its ID, as the
 event_value. When this event is emitted, the entity should be ready to work,
 in particular, all its components should be subscribed to the appropriate events
 """
+import inspect
 
 from bear_hug.bear_utilities import BearECSException, BearJSONException
 from bear_hug.widgets import Widget, Listener
@@ -89,11 +90,12 @@ class Component(Listener):
     "former_owners": ["asd", "zxc", "qwe"],
     "former_owners_type": "set"}
 
-    It will be eventually produce a following call:
+    Its deserialization is equivalent to the following call:
     `x = TestComponent(x=5, y=5, direction='r',
-                       former_owners=set(['asd', 'zxc', 'qwe']))
+                       former_owners=set(['asd', 'zxc', 'qwe']))`
 
-    The following keys are forbidden: 'name', 'owner', 'dispatcher'.
+    The following keys are forbidden: 'name', 'owner', 'dispatcher'. Kwarg
+    validity is not controlled except by `Component.__init__()`.
 
     """
     def __init__(self, dispatcher, name='Root component', owner=None):
@@ -256,7 +258,7 @@ class PositionComponent(Component):
                     self.move(new_x, new_y)
 
     def __repr__(self):
-        d = {'class': 'PositionComponent',
+        d = {'class': self.__class__.__name__,
              'x': self.x,
              'y': self.y,
              'vx': self.vx,
@@ -277,6 +279,7 @@ class SpawnerComponent(Component):
     :param relative_pos: a starting position of a spawned Entity, relative to
     self.
     """
+    #TODO: rewrite demos to deprecate this piece of shit.
     # The BRUTALITY project has a better SpawnerComponent, but that one spawns
     # entities. See brutality/components.py and brutality/entities.py
     def __init__(self, dispatcher, to_spawn, relative_pos=(0, 0), owner=None):
@@ -346,15 +349,14 @@ class DestructorComponent(Component):
             self.owner.remove_component(self.name)
 
     def __repr__(self):
-        d = {'class': DestructorComponent,
+        d = {'class': self.__class__.__name__,
              'is_destroying': self.is_destroying} # Could be saved right in the middle of destruction
         return dumps(d)
 
 
 def deserialize_component(json_string, dispatcher):
     """
-    Provided a JSON string, builds the component object creation expression and
-    returns whatever that expression returns.
+    Provided a JSON string, creates a necessary object.
     :param json_string:
     :param dispatcher:
     :return:
@@ -365,16 +367,15 @@ def deserialize_component(json_string, dispatcher):
             raise BearJSONException(f'Forbidden key {forbidden_key} in component JSON')
     if 'class' not in d:
         raise BearJSONException('No class provided in component JSON')
-    try:
-        class_var = globals()[d['class']]
-    except KeyError:
-        raise BearJSONException(f"Unknown class {d['class']}")
+    for frame in inspect.getouterframes(inspect.currentframe()):
+        if d['class'] in frame.frame.f_globals:
+            class_var = frame.frame.f_globals[d['class']]
+            break
+    del frame
     if not issubclass(class_var, Component):
         raise BearJSONException(f"Class name {d['class']}mapped to something other than a Component subclass")
     kwargs = {x: d[x] for x in d.keys() if x != 'class'}
-    # TODO: either get this to work or use an eval-based solution
     return class_var(dispatcher, **kwargs)
-
 
 
 def deserialize_entity(json_string, dispatcher):
