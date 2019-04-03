@@ -142,3 +142,6 @@ class BearECSException(BearException):
 
 class BearSoundException(BearException):
     pass
+
+class BearJSONException(BearException):
+    pass

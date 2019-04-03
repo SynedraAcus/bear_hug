@@ -13,9 +13,11 @@ event_value. When this event is emitted, the entity should be ready to work,
 in particular, all its components should be subscribed to the appropriate events
 """
 
-from bear_hug.bear_utilities import BearECSException
+from bear_hug.bear_utilities import BearECSException, BearJSONException
 from bear_hug.widgets import Widget, Listener
-from bear_hug.event import BearEvent
+from bear_hug.event import BearEvent, BearEventDispatcher
+
+from json import dumps, loads
 
 
 class Entity:
@@ -93,12 +95,12 @@ class Component(Listener):
 
     The following keys are forbidden: 'name', 'owner', 'dispatcher'.
 
-    # TODO: Actually write the serializers
     """
     def __init__(self, dispatcher, name='Root component', owner=None):
         super().__init__()
         if not name:
             raise BearECSException('Cannot create a component without a name')
+        # TODO: Assert that dispatcher is a Dispatcher
         self.dispatcher = dispatcher
         self.name = name
         self.owner = None
@@ -131,8 +133,8 @@ class Component(Listener):
         raise NotImplementedError('Component __repr__ should be overloaded to generate a valid JSON')
 
     def __str__(self):
-        owner = self.owner if self.owner else 'nobody'
-        return f'{type(self).__name__} at {id(self)} attached to {owner.id}'
+        owner = self.owner.id if self.owner else 'nobody'
+        return f'{type(self).__name__} at {id(self)} attached to {owner}'
 
 
 class WidgetComponent(Component):
@@ -252,13 +254,23 @@ class PositionComponent(Component):
                     new_y = self.y
                 if not self.x == new_x or not self.y == new_y:
                     self.move(new_x, new_y)
+
+    def __repr__(self):
+        d = {'class': 'PositionComponent',
+             'x': self.x,
+             'y': self.y,
+             'vx': self.vx,
+             'vy': self.vy}
+        return dumps(d)
                 
 
 class SpawnerComponent(Component):
     """
     A component responsible for creating other entities. A current
-    implementation can produce only a single Entity type; this will be fixed
-    when entity factories are up and running.
+    implementation is pretty much a placeholder. It can produce only a single
+    Entity type; in addition, it stores a callable to determine what to spawn
+    and therefore can not be serialized via `repr()`. Attempt to serialize
+    causes BearECSException to be raised.
     
     :param to_spawn: A callable that returns an Entity to be created. The entity
     needs to have `widget` and `position` components.
@@ -289,15 +301,19 @@ class SpawnerComponent(Component):
                                                          entity.position.x,
                                                          entity.position.y)))
 
+    def __repr__(self):
+        # See class docstring
+        raise BearJSONException('Tried to dump SpawnerComponent')
+
 
 class DestructorComponent(Component):
     """
     A component responsible for cleanly destroying its entity and everything
     that has to do with it.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, is_destroying=False, **kwargs):
         super().__init__(*args, name='destructor', **kwargs)
-        self.is_destroying = False
+        self.is_destroying = is_destroying
         self.dispatcher.register_listener(self, ['service', 'tick'])
     
     def destroy(self):
@@ -328,3 +344,39 @@ class DestructorComponent(Component):
                     self.owner.remove_component(component)
             self.dispatcher.unregister_listener(self)
             self.owner.remove_component(self.name)
+
+    def __repr__(self):
+        d = {'class': DestructorComponent,
+             'is_destroying': self.is_destroying} # Could be saved right in the middle of destruction
+        return dumps(d)
+
+
+def deserialize_component(json_string, dispatcher):
+    """
+    Provided a JSON string, builds the component object creation expression and
+    returns whatever that expression returns.
+    :param json_string:
+    :param dispatcher:
+    :return:
+    """
+    d = loads(json_string)
+    for forbidden_key in ('name', 'owner', 'dispatcher'):
+        if forbidden_key in d.keys():
+            raise BearJSONException(f'Forbidden key {forbidden_key} in component JSON')
+    if 'class' not in d:
+        raise BearJSONException('No class provided in component JSON')
+    try:
+        class_var = globals()[d['class']]
+    except KeyError:
+        raise BearJSONException(f"Unknown class {d['class']}")
+    if not issubclass(class_var, Component):
+        raise BearJSONException(f"Class name {d['class']}mapped to something other than a Component subclass")
+    kwargs = {x: d[x] for x in d.keys() if x != 'class'}
+    # TODO: either get this to work or use an eval-based solution
+    return class_var(dispatcher, **kwargs)
+
+
+
+def deserialize_entity(json_string, dispatcher):
+    pass
+
