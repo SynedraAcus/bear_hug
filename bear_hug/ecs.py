@@ -179,7 +179,8 @@ class WidgetComponent(Component):
     
     def __repr__(self):
         #TODO: requires the widget serializer to work
-        pass
+        d = {'class': 'WidgetComponent',
+             'widget': repr(self.widget)}
 
 
 class PositionComponent(Component):

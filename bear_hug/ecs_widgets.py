@@ -135,6 +135,14 @@ class ECSLayout(Layout):
             self.need_redraw = False
         if r:
             return r
+        
+    def __repr__(self):
+        # It's unlikely that repr(layout) is ever gonna be necessary.
+        # And it's very bad to try and serialize them. Widget serialization is
+        # only intended for use with the Widgets that can be part of a
+        # WidgetComponent. Layouts are sorta frontend for the entire ECS system,
+        # not a part of it.
+        raise BearECSException('ECSLayout and its children are not meant to be stored via repr')
 
 
 class ScrollableECSLayout(Layout):
@@ -347,3 +355,12 @@ class ScrollableECSLayout(Layout):
         
         if r:
             return r
+
+    def __repr__(self):
+        # It's unlikely that repr(layout) is ever gonna be necessary.
+        # And it's very bad to try and serialize them. Widget serialization is
+        # only intended for use with the Widgets that can be part of a
+        # WidgetComponent. Layouts are sorta frontend for the entire ECS system,
+        # not a part of it.
+        raise BearECSException(
+            'ECSLayout and its children are not meant to be stored via repr')
