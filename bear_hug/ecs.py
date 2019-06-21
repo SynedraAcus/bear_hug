@@ -82,9 +82,8 @@ class Component(Listener):
     deserialized and treated as kwargs to a newly-created object. To define the
     deserialization protocol, JSON dict may also contain keys formatted as
     '{kwarg_name}_type' which should be a string and will be eval-ed as during
-    deserialization. Python's builtin converters (eg `str`, `int` or `float`)
-    are perfectly safe, for the custom ones make sure that they are imported
-    when the component is created.
+    deserialization. Only Python's builtin converters (eg `str`, `int` or
+    `float`) are perfectly safe; custom ones are currently unsupported.
     For example, the following is a valid JSON:
 
     {"class": "TestComponent",
@@ -376,10 +375,19 @@ def deserialize_component(json_string, dispatcher):
             raise BearJSONException(f'Forbidden key {forbidden_key} in component JSON')
     if 'class' not in d:
         raise BearJSONException('No class provided in component JSON')
+    # Only builtins supported for converters. Although custom converters could
+    # be provided like with classes, IMO this way is safer
+    converters = {}
+    for key in d:
+        if '_type' in key:
+            converters[key[:-5]] = globals()['__builtins__'][d[key]]
+    types = [x for x in d if '_type' in x]
+    for t in types:
+        del(d[t])
     # Try to get the Component class from where the function was imported, or
     # the importers of *that* frame. Without this, the function would only see
     # classes from this very file, or ones imported into it, and that would
-    # break the deserialization of custom components
+    # break the deserialization of custom components.
     for frame in inspect.getouterframes(inspect.currentframe()):
         if d['class'] in frame.frame.f_globals:
             class_var = frame.frame.f_globals[d['class']]
@@ -387,7 +395,15 @@ def deserialize_component(json_string, dispatcher):
     del frame
     if not issubclass(class_var, Component):
         raise BearJSONException(f"Class name {d['class']}mapped to something other than a Component subclass")
-    kwargs = {x: d[x] for x in d.keys() if x != 'class'}
+    kwargs = {}
+    for key in d:
+        if key == 'class':
+            continue
+        if key in converters:
+            kwargs[key] = converters[key](d[key])
+        else:
+            kwargs[key] = d[key]
+    # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
     return class_var(dispatcher, **kwargs)
 
 
