@@ -61,6 +61,10 @@ class Entity:
             raise BearECSException('Cannot remove component ' +
                           '{} that Entity doesn\'t have'.format(component_name))
         
+    def __repr__(self):
+        # TODO: Entity (de)serializer
+        pass
+        
     
 class Component(Listener):
     """
@@ -102,7 +106,8 @@ class Component(Listener):
         super().__init__()
         if not name:
             raise BearECSException('Cannot create a component without a name')
-        # TODO: Assert that dispatcher is a Dispatcher
+        if dispatcher and not isinstance(dispatcher, BearEventDispatcher):
+            raise BearECSException(f'Attempted to use {type(dispatcher)} as dispatcher')
         self.dispatcher = dispatcher
         self.name = name
         self.owner = None
@@ -172,6 +177,10 @@ class WidgetComponent(Component):
     @property
     def size(self):
         return self.widget.size
+    
+    def __repr__(self):
+        #TODO: requires the widget serializer to work
+        pass
 
 
 class PositionComponent(Component):
@@ -269,7 +278,7 @@ class PositionComponent(Component):
 class SpawnerComponent(Component):
     """
     A component responsible for creating other entities. A current
-    implementation is pretty much a placeholder. It can produce only a single
+    implementation is pretty much deprecated. It can produce only a single
     Entity type; in addition, it stores a callable to determine what to spawn
     and therefore can not be serialized via `repr()`. Attempt to serialize
     causes BearECSException to be raised.
@@ -367,6 +376,10 @@ def deserialize_component(json_string, dispatcher):
             raise BearJSONException(f'Forbidden key {forbidden_key} in component JSON')
     if 'class' not in d:
         raise BearJSONException('No class provided in component JSON')
+    # Try to get the Component class from where the function was imported, or
+    # the importers of *that* frame. Without this, the function would only see
+    # classes from this very file, or ones imported into it, and that would
+    # break the deserialization of custom components
     for frame in inspect.getouterframes(inspect.currentframe()):
         if d['class'] in frame.frame.f_globals:
             class_var = frame.frame.f_globals[d['class']]
