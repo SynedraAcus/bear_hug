@@ -352,6 +352,12 @@ class XpLoader(ASCIILoader):
         offset += 1
         # Covering cases when we have like '0x4' and '0xAB' in color
         # panning shorter values with zeroes to max size
+        # TODO: store color as int
+        # This may increase performance (since with str colors bearlibterminal
+        # converts the color to 32-bit int), but may break JSON widget
+        # serializations which currently store colors as strings for
+        # compatibility with named colors, eg 'black' or 'white', or add some
+        # new and exciting bugs
         rgb = [str(hex(x)).split('x')[1] for x in (fore_r, fore_g, fore_b)]
         length = max((len(x) for x in rgb))
         if length >= 2:

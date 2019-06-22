@@ -30,6 +30,45 @@ class Widget:
 
     `chars` and `colors` should be exactly the same shape, otherwise the
     BearException is raised.
+    
+    Widgets can be serialized into JSON similarly to Components and Entities.
+    `repr(widget)` is used for serialization and should generate a valid
+    JSON-encoded dict. It should always include a 'class' key which
+    should equal the class name for that component and will be used by a
+    deserializer to determine what to create. `chars` and `colors` keys are also
+    necessary. They should encode widget's chars and colors as arrays of strings
+    and each of these strings should be a comma-separated list of values for
+    chars' and colors' inner lists (str-converted chars and str-converted
+    `#ffffff`-type colors).
+    
+    All other keys will be deserialized and treated as kwargs to a newly-created
+    object. To define the deserialization protocol, JSON dict may also contain
+    keys formatted as '{kwarg_name}_type' which should be a string and will be
+    eval-ed as during deserialization. Only Python's builtin converters (eg
+    `str`, `int` or `float`) are safe; custom ones are currently unsupported.
+    For example, the following is a valid JSON:
+
+    ```
+    {"class": "MyWidget",
+    "chars": ["b,b,b", "a,b,a", "b,a,b"],
+    "colors": ["#fff,#fff,#fff", "#000,#fff,#000", "#fff,#000,#fff"],
+    "former_owners": ["asd", "zxc", "qwe"],
+    "former_owners_type": "set"}
+    ```
+
+    Its deserialization is equivalent to the following call:
+    ```
+    `x = MyWidget(chars=[['b','b','b'],
+                         ['a','b','a'],
+                         ['b','a','b']],
+                  colors=[['#fff','#fff','#fff'],
+                          ['#000','#fff','#000'],
+                          ['#fff','#000','#fff']],
+                  former_owners=set(['asd, 'zxc', 'qwe']))
+    ```
+
+    The following keys are forbidden: `parent` and `terminal`. Kwarg validity
+    is not controlled except by `Component.__init__()`.
     """
     #TODO: maybe support background colour after all?
     
