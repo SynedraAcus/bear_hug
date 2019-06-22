@@ -24,7 +24,6 @@ def deserialize_widget(json_string):
     :param dispatcher:
     :return:
     """
-    # TODO: make serializer work with `"` and `\\`
     d = loads(json_string)
     for forbidden_key in ('name', 'owner', 'dispatcher'):
         if forbidden_key in d.keys():
@@ -60,7 +59,7 @@ def deserialize_widget(json_string):
         else:
             kwargs[key] = d[key]
     # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
-    return class_var(chars=[x.split(',') for x in d['chars']],
+    return class_var(chars=[[char for char in x] for x in d['chars']],
                      colors=[x.split(',') for x in d['colors']],
                      **kwargs)
 
@@ -204,8 +203,11 @@ class Widget:
             self.colors = self.colors[::-1]
             
     def __repr__(self):
+        char_strings = [''.join(x) for x in self.chars]
+        for string in char_strings:
+            string.replace('\"', '\u0022"').replace('\\', '\u005c')
         d = {'class': self.__class__.__name__,
-             'chars': [','.join(x) for x in self.chars],
+             'chars': char_strings,
              'colors': [','.join(x) for x in self.colors]}
         return dumps(d)
 
