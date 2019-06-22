@@ -5,12 +5,64 @@ for simpler games and apps. However, for the sake of clearer architecture,
 entities are recommended.
 """
 
+import inspect
+
 from bear_hug.bear_hug import BearTerminal
 from bear_hug.bear_utilities import shapes_equal, blit, copy_shape, slice_nested,\
-    BearException, BearLayoutException
+    BearException, BearLayoutException, BearJSONException
 from bear_hug.event import BearEvent
+
 from collections import deque
+from json import dumps, loads
 from time import time
+
+
+def deserialize_widget(json_string):
+    """
+    Provided a JSON string, return a widget it encodes.
+    :param json_string:
+    :param dispatcher:
+    :return:
+    """
+    # TODO: make serializer work with `"` and `\\`
+    d = loads(json_string)
+    for forbidden_key in ('name', 'owner', 'dispatcher'):
+        if forbidden_key in d.keys():
+            raise BearJSONException(f'Forbidden key {forbidden_key} in widget JSON')
+    if 'class' not in d:
+        raise BearJSONException('No class provided in component JSON')
+    # Only builtins supported for converters. Although custom converters could
+    # be provided like with classes, IMO this way is safer
+    converters = {}
+    for key in d:
+        if '_type' in key:
+            converters[key[:-5]] = globals()['__builtins__'][d[key]]
+    types = [x for x in d if '_type' in x]
+    for t in types:
+        del(d[t])
+    # Try to get the Component class from where the function was imported, or
+    # the importers of *that* frame. Without this, the function would only see
+    # classes from this very file, or ones imported into it, and that would
+    # break the deserialization of custom components.
+    for frame in inspect.getouterframes(inspect.currentframe()):
+        if d['class'] in frame.frame.f_globals:
+            class_var = frame.frame.f_globals[d['class']]
+            break
+    del frame
+    if not issubclass(class_var, Widget):
+        raise BearJSONException(f"Class name {d['class']}mapped to something other than a Widget subclass")
+    kwargs = {}
+    for key in d:
+        if key in {'class', 'chars', 'colors'}:
+            continue
+        if key in converters:
+            kwargs[key] = converters[key](d[key])
+        else:
+            kwargs[key] = d[key]
+    # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
+    return class_var(chars=[x.split(',') for x in d['chars']],
+                     colors=[x.split(',') for x in d['colors']],
+                     **kwargs)
 
 
 class Widget:
@@ -150,6 +202,12 @@ class Widget:
         elif axis in ('y', 'vertical'):
             self.chars = self.chars[::-1]
             self.colors = self.colors[::-1]
+            
+    def __repr__(self):
+        d = {'class': self.__class__.__name__,
+             'chars': [','.join(x) for x in self.chars],
+             'colors': [','.join(x) for x in self.colors]}
+        return dumps(d)
 
 
 class SwitchingWidget(Widget):
