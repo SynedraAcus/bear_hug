@@ -5,14 +5,15 @@ An ECS test.
 """
 from bear_hug.bear_hug import BearTerminal, BearLoop
 from bear_hug.bear_utilities import copy_shape
-from bear_hug.ecs import Entity, WidgetComponent, PositionComponent, SpawnerComponent
+from bear_hug.ecs import Entity, Component, WidgetComponent,\
+    PositionComponent, SpawnerComponent
 from bear_hug.ecs_widgets import ECSLayout
 from bear_hug.event import BearEventDispatcher, BearEvent
 from bear_hug.resources import Atlas, XpLoader
 from bear_hug.sound import SoundListener
 from bear_hug.widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
     Layout, LoggingListener, SimpleAnimationWidget, Animation,\
-    MultipleAnimationWidget, deserialize_widget
+    MultipleAnimationWidget, deserialize_widget, SwitchingWidget
 
 import sys
 
@@ -127,11 +128,40 @@ def create_cop(atlas, dispatcher, x, y):
                                    event_value=('cop', x, y)))
 
 
+class TestTickerComponent(Component):
+    """
+    A test component that keeps owner's SwitchingWidget
+    (assuming that's what is in `owner.widget.widget`) switching between
+    'a' and 'b'. Designed for quick-and-dirty testing of SwitchingWidget in ECS
+    framework and will break when these image names are unsupported
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.next_image = 'a'
+        
+    def on_event(self, event):
+        if event.event_type == 'tick':
+            self.owner.widget.widget.switch_to_image(self.next_image)
+            if self.next_image == 'a':
+                self.next_image = 'b'
+            else:
+                self.next_image = 'a'
+            print(self.next_image)
+            
+            
 def create_barrel(atlas, dispatcher, x, y):
     barrel_entity = Entity(id='Barrel')
     widget = SimpleAnimationWidget(Animation((atlas.get_element('barrel_1'),
                                     atlas.get_element('barrel_2')), 2),
                                     emit_ecs= True)
+    # Testing JSON dump of SwitchingWidget
+    # w = SwitchingWidget(images_dict={'a': atlas.get_element('barrel_1'),
+    #                                  'b': atlas.get_element('barrel_2')},
+    #                     initial_image='a')
+    # widget = deserialize_widget(repr(w))
+    # ticker = TestTickerComponent(dispatcher, owner=barrel_entity)
+    # dispatcher.register_listener(ticker, 'tick')
+    
     widget_component = WidgetComponent(dispatcher, widget, owner=barrel_entity)
     position_component = PositionComponent(dispatcher, x=x, y=y,
                                            owner=barrel_entity)

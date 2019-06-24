@@ -88,9 +88,9 @@ class Widget:
     should equal the class name for that component and will be used by a
     deserializer to determine what to create. `chars` and `colors` keys are also
     necessary. They should encode widget's chars and colors as arrays of strings
-    and each of these strings should be a comma-separated list of values for
+    and each of these strings should be a list of values for
     chars' and colors' inner lists (str-converted chars and str-converted
-    `#ffffff`-type colors).
+    `#ffffff`-type colors; comma-separated for colors).
     
     All other keys will be deserialized and treated as kwargs to a newly-created
     object. To define the deserialization protocol, JSON dict may also contain
@@ -109,9 +109,9 @@ class Widget:
 
     Its deserialization is equivalent to the following call:
     ```
-    `x = MyWidget(chars=[['b','b','b'],
-                         ['a','b','a'],
-                         ['b','a','b']],
+    `x = MyWidget(chars=[['bbb'],
+                         ['aba'],
+                         ['bab']],
                   colors=[['#fff','#fff','#fff'],
                           ['#000','#fff','#000'],
                           ['#fff','#000','#fff']],
@@ -219,9 +219,19 @@ class SwitchingWidget(Widget):
     Does not do any transition animations.
     """
     
-    def __init__(self, images_dict, initial_image=None):
+    def __init__(self, images_dict=None, initial_image=None, chars=None, colors=None):
+        # Chars and colors are not used anywhere; they are included simply for
+        # the compatibility with serialization. Actual chars and colors of the
+        # SwitchingWidget are set to `images_dict[initial_image]` upon creation
         test_shape = None
         for image in images_dict:
+            # Checking if the image is from JSON (each line is a string) or a
+            # correct list-of-lists. If it's former, converts
+            if isinstance(images_dict[image][0][0], str):
+                images_dict[image][0] = [[char for char in x]
+                                         for x in images_dict[image][0]]
+                images_dict[image][1] = [list(x.split(','))
+                                         for x in images_dict[image][1]]
             if not shapes_equal(images_dict[image][0], images_dict[image][1]):
                 raise BearException(
                     f'Chars and colors of different shape for image ID {image} in SwitchingWidget')
@@ -248,7 +258,20 @@ class SwitchingWidget(Widget):
                 raise BearException(
                     f'Attempting to switch to incorrect image ID {image_id}')
             
-            
+    def __repr__(self):
+        d = loads(super().__repr__())
+        d['initial_image'] = self.current_image
+        images = {}
+        for image in self.images:
+            images[image] = []
+            images[image].append([''.join(x).replace('\"', '\u0022"').
+                                             replace('\\', '\u005c')
+                                  for x in self.images[image][0]])
+            images[image].append([','.join(x) for x in self.images[image][1]])
+        d['images_dict'] = images
+        return dumps(d)
+        
+        
 class Layout(Widget):
     """
     A widget that can add others as its children.
@@ -262,6 +285,8 @@ class Layout(Widget):
     or as l.background
     The Layout automatically redraws itself on `tick` event, whether its
     children have updated or not.
+    
+    Does not currently support serialization
     """
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
