@@ -404,7 +404,8 @@ def deserialize_component(json_string, dispatcher):
             kwargs[key] = converters[key](d[key])
         else:
             kwargs[key] = d[key]
-    # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
+    # TODO: subscribe widgets to events in WidgetComponent deserialization
+    # Probably requires some dictionary of who should subscribe where?
     return class_var(dispatcher, **kwargs)
 
 

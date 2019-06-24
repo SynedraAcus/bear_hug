@@ -286,7 +286,7 @@ class Layout(Widget):
     The Layout automatically redraws itself on `tick` event, whether its
     children have updated or not.
     
-    Does not currently support serialization
+    Does not currently support JSON serialization
     """
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
@@ -441,6 +441,9 @@ class Layout(Widget):
         """
         self_pos = self.terminal.widget_locations(self).pos
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
+    
+    def __repr__(self):
+        raise BearException('Layout does not support __repr__ serialization')
 
 
 class ScrollBar(Widget):
@@ -451,7 +454,7 @@ class ScrollBar(Widget):
     `length` -- int
     'colors' -- two BLT-compatible colors for background and the moving thingy
     
-    Does not accept input
+    Does not accept input, does not support serialization
     """
     def __init__(self, orientation='vertical', length=10,
                  colors=('gray', 'white')):
@@ -491,6 +494,9 @@ class ScrollBar(Widget):
         else:
             for i in range(start, start+width):
                 self.colors[0][i] = self.bar_color
+                
+    def __repr__(self):
+        raise BearException('ScrollBar does not support __repr__ serialization')
 
 
 class ScrollableLayout(Layout):
@@ -502,6 +508,8 @@ class ScrollableLayout(Layout):
     by `view_pos` and `view_size` arguments.
     
     Works by overloading _rebuild_self to only show a part of child_pointers
+    
+    Does not support JSON serialization
     """
     def __init__(self, chars, colors,
                  view_pos=(0, 0), view_size=(10, 10)):
@@ -575,6 +583,9 @@ class ScrollableLayout(Layout):
         pos = (self.view_pos[0] + shift[0], self.view_pos[1] + shift[1])
         self.scroll_to(pos)
     
+    def __repr__(self):
+        raise BearException('ScrollableLayout does not support __repr__ serialization')
+    
 
 class InputScrollable(Layout):
     """
@@ -587,6 +598,8 @@ class InputScrollable(Layout):
     bigger than view_size in the corresponding dimension to add ScrollBar.
     
     Can be scrolled by arrow keys.
+    
+    Does not support JSON serialization
     """
     def __init__(self, chars, colors, view_pos=(0, 0), view_size=(10, 10),
                  bottom_bar=False, right_bar=False):
@@ -665,6 +678,9 @@ class InputScrollable(Layout):
             self.scrollable.add_child(child, pos, skip_checks)
         else:
             super().add_child(child, pos, skip_checks)
+            
+    def __repr__(self):
+        raise BearException('InputScrollable does not support __repr__ serialization')
             
 
 # Animations and other complex decorative Widgets
@@ -820,10 +836,16 @@ class Label(Widget):
     width to accomodate all possible inputs during Label creation.
     """
     
-    def __init__(self, text,
+    def __init__(self, text, chars=None, colors=None,
                  just='left', color='white', width=None, height=None):
-        chars = Label._generate_chars(text, width, height, just)
-        colors = copy_shape(chars, color)
+        # If chars and colors are not provided, generate them. If they are,
+        # typically from JSON dump, no checks are performed. Thus, in theory
+        # it's possible to break this by providing overly big text and changing
+        # adjustment.
+        if not chars:
+            chars = Label._generate_chars(text, width, height, just)
+        if not colors:
+            colors = copy_shape(chars, color)
         super().__init__(chars, colors)
         self.color = color
         # Bypassing setter, because I need to actually create fields
@@ -869,6 +891,9 @@ class Label(Widget):
 
     @text.setter
     def text(self, value):
+        # TODO: check text size in Label
+        # maybe raise something sensible when `text` is set for something longer
+        # than fits in `chars`.
         if not self._text:
             self._text = value
         chars = copy_shape(self.chars, ' ')
@@ -894,6 +919,12 @@ class Label(Widget):
         if self.terminal:
             self.terminal.update_widget(self)
             
+    def __repr__(self):
+        d = loads(super().__repr__())
+        d['text'] = self.text
+        d['just'] = self.just
+        d['color'] = self.color
+            
             
 class InputField(Label):
     """
@@ -902,10 +933,10 @@ class InputField(Label):
     The length of the input line is limited by the InputField size. When the
     input is finished (by pressing ENTER), InputField emits a
     `BearEvent(event_type='text_input', event_value=(field.name, field.text))`
-    Since BLT has no support for system keyboard layouts, only supports Latin.
-    This also applies to non-letter symbols: for example, comma and period are
-    considered to be on different keys even in Russian layout, where they are
-    on the same one.
+    Since BLT has no support for system keyboard layouts, only supports QWERTY
+    Latin. This also applies to non-letter symbols: for example, comma and
+    period are considered to be different keys even in Russian layout, where
+    they are on the same physical key.
     """
     charcodes = {'SPACE': ' ', 'MINUS': '-', 'EQUALS': '=',
                  'LBRACKET': '[', 'RBRACKET': ']', 'BACKSLASH': '\\',
@@ -1001,6 +1032,13 @@ class InputField(Label):
                 return self.charcodes[symbol]
         else:
             return ''
+        
+    def __repr__(self):
+        d = loads(super().__repr__())
+        d['name'] = self.name
+        d['finishing'] = self.finishing
+        d['accept_input'] = self.accept_input
+        return dumps(d)
 
 
 class FPSCounter(Label):
@@ -1029,6 +1067,11 @@ class FPSCounter(Label):
             self._update_self()
             if self.parent is self.terminal:
                 self.terminal.update_widget(self, refresh=True)
+                
+    def __repr__(self):
+        raise BearException('FPSCounter does not support __repr__ serialization')
+        # This should only be used **OUTSIDE** the ECS system.
+        # Some debug screen or something
 
 
 class MousePosWidget(Label):
@@ -1057,7 +1100,9 @@ class MousePosWidget(Label):
         x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
         y = str(self.terminal.check_state('TK_MOUSE_Y')).rjust(3, '0')
         return x + 'x' + y
-  
+
+    def __repr__(self):
+        raise BearException('MousePosWidget does not support __repr__ serialization')
     
 # Listeners
 class Listener:
