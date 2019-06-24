@@ -956,7 +956,8 @@ class InputField(Label):
                        '3': '#', '4': '$', '5': '%', '6': '^', '7': '&',
                        '8': '*', '9': '(', '0': ')'}
     
-    def __init__(self, name='Input field', accept_input=True, **kwargs):
+    def __init__(self, name='Input field', accept_input=True, finishing=False,
+                 **kwargs):
         if 'width' not in kwargs:
             raise BearException('InputField cannot be created without ' +
                                 'either `width` or default text')
@@ -964,8 +965,8 @@ class InputField(Label):
         # The name will be used when the input is finished
         self.name = name
         self.shift_pressed = False
-        # Set to True to return 'text_input' and
-        self.finishing = False
+        # Set to True to return 'text_input' and stop accepting
+        self.finishing = finishing
         self.accept_input = accept_input
         
     def on_event(self, event):
