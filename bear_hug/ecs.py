@@ -15,7 +15,7 @@ in particular, all its components should be subscribed to the appropriate events
 import inspect
 
 from bear_hug.bear_utilities import BearECSException, BearJSONException
-from bear_hug.widgets import Widget, Listener
+from bear_hug.widgets import Widget, Listener, deserialize_widget
 from bear_hug.event import BearEvent, BearEventDispatcher
 
 from json import dumps, loads
@@ -178,9 +178,9 @@ class WidgetComponent(Component):
         return self.widget.size
     
     def __repr__(self):
-        #TODO: requires the widget serializer to work
         d = {'class': 'WidgetComponent',
-             'widget': repr(self.widget)}
+             'widget': loads(repr(self.widget))}
+        return loads(d)
 
 
 class PositionComponent(Component):
@@ -402,10 +402,13 @@ def deserialize_component(json_string, dispatcher):
             continue
         if key in converters:
             kwargs[key] = converters[key](d[key])
+        elif key == 'widget':
+            w = deserialize_widget(d['widget'])
+            #TODO: subscribe widgets to events other than 'tick' in deserialization
+            dispatcher.register_listener(w, 'tick')
+            kwargs['widget'] = w
         else:
             kwargs[key] = d[key]
-    # TODO: subscribe widgets to events in WidgetComponent deserialization
-    # Probably requires some dictionary of who should subscribe where?
     return class_var(dispatcher, **kwargs)
 
 
