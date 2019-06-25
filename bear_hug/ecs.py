@@ -62,8 +62,9 @@ class Entity:
                           '{} that Entity doesn\'t have'.format(component_name))
         
     def __repr__(self):
-        # TODO: Entity (de)serializer
-        pass
+        d = {'id': self.id,
+             'components': [repr(x) for x in self.components]}
+        return dumps(d)
         
     
 class Component(Listener):
@@ -413,5 +414,9 @@ def deserialize_component(json_string, dispatcher):
 
 
 def deserialize_entity(json_string, dispatcher):
-    pass
+    d = loads(json_string)
+    components = [deserialize_component(x, dispatcher) for x in d['components']]
+    return Entity(id=d['id'], components=components)
+    
+    
 
