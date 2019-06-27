@@ -24,6 +24,11 @@ def deserialize_widget(serial):
     :param dispatcher:
     :return:
     """
+    # TODO: support getting chars and colors for deserialization from atlas
+    # As of now, chars and colors are always dumped with the widget. Maybe some
+    # widget children (but definitely not the base Widget class) could remember
+    # the ID of their image in atlas and dump just that. That would reduce the
+    # dump size at the cost of complicating deserialization interface
     if isinstance(serial, str):
         d = loads(serial)
     elif isinstance(serial, dict):
@@ -645,7 +650,6 @@ class InputScrollable(Layout):
             self.add_child(self.bottom_bar, pos=(0, self.height-1))
         self.building_self = False
         
-    # TODO: accept mouse wheel and drag scroll
     def on_event(self, event):
         if event.event_type == 'key_down':
             scrolled = False
