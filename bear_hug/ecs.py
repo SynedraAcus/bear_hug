@@ -43,6 +43,7 @@ class Entity:
         :return:
         """
         if not isinstance(component, Component):
+            print(component)
             raise BearECSException('Only Component instance can be added' +
                                    ' as an entity\'s component')
         if component.name not in self.components and \
@@ -63,7 +64,7 @@ class Entity:
         
     def __repr__(self):
         d = {'id': self.id,
-             'components': [repr(x) for x in self.components]}
+             'components': {x: repr(self.__dict__[x]) for x in self.components}}
         return dumps(d)
         
     
@@ -181,7 +182,7 @@ class WidgetComponent(Component):
     def __repr__(self):
         d = {'class': 'WidgetComponent',
              'widget': loads(repr(self.widget))}
-        return loads(d)
+        return dumps(d)
 
 
 class PositionComponent(Component):
@@ -364,14 +365,23 @@ class DestructorComponent(Component):
         return dumps(d)
 
 
-def deserialize_component(json_string, dispatcher):
+def deserialize_component(serial, dispatcher):
     """
     Provided a JSON string, creates a necessary object.
+    
+    Does not subscribe a component to anything (which can be done either by a
+    caller or in the ComponentSubclass.__init__) or assign it to any Entity
+    (which is probably done within `deserialize_entity`)
     :param json_string:
     :param dispatcher:
     :return:
     """
-    d = loads(json_string)
+    if isinstance(serial, str):
+        d = loads(serial)
+    elif isinstance(serial, dict):
+        d = serial
+    else:
+        raise BearJSONException(f'Attempting to deserialize {type(serial)} to Component')
     for forbidden_key in ('name', 'owner', 'dispatcher'):
         if forbidden_key in d.keys():
             raise BearJSONException(f'Forbidden key {forbidden_key} in component JSON')
@@ -413,9 +423,19 @@ def deserialize_component(json_string, dispatcher):
     return class_var(dispatcher, **kwargs)
 
 
-def deserialize_entity(json_string, dispatcher):
-    d = loads(json_string)
-    components = [deserialize_component(x, dispatcher) for x in d['components']]
+def deserialize_entity(serial, dispatcher):
+    """Load the entity from JSON string or dict.
+    
+    Does not subscribe a new entity to anything or emit `bear_create` events;
+    this should be done by a caller."""
+    if isinstance(serial, str):
+        d = loads(serial)
+    elif isinstance(serial, dict):
+        d = serial
+    else:
+        raise BearJSONException(f'Attempting to deserialize {type(serial)} to Entity')
+    components = [deserialize_component(d['components'][x], dispatcher)
+                  for x in d['components']]
     return Entity(id=d['id'], components=components)
     
     

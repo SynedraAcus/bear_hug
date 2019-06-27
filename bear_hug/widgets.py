@@ -17,14 +17,19 @@ from json import dumps, loads
 from time import time
 
 
-def deserialize_widget(json_string):
+def deserialize_widget(serial):
     """
     Provided a JSON string, return a widget it encodes.
     :param json_string:
     :param dispatcher:
     :return:
     """
-    d = loads(json_string)
+    if isinstance(serial, str):
+        d = loads(serial)
+    elif isinstance(serial, dict):
+        d = serial
+    else:
+        raise BearJSONException(f'Attempting to deserialize {type(serial)} to Widget')
     for forbidden_key in ('name', 'owner', 'dispatcher'):
         if forbidden_key in d.keys():
             raise BearJSONException(f'Forbidden key {forbidden_key} in widget JSON')
@@ -59,8 +64,9 @@ def deserialize_widget(json_string):
         else:
             kwargs[key] = d[key]
     # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
-    return class_var(chars=[[char for char in x] for x in d['chars']],
-                     colors=[x.split(',') for x in d['colors']],
+    # Chars and colors are not kwargs
+    return class_var([[char for char in x] for x in d['chars']],
+                     [x.split(',') for x in d['colors']],
                      **kwargs)
 
 

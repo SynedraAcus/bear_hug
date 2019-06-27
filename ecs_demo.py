@@ -6,7 +6,7 @@ An ECS test.
 from bear_hug.bear_hug import BearTerminal, BearLoop
 from bear_hug.bear_utilities import copy_shape
 from bear_hug.ecs import Entity, Component, WidgetComponent,\
-    PositionComponent, SpawnerComponent
+    PositionComponent, SpawnerComponent, deserialize_entity
 from bear_hug.ecs_widgets import ECSLayout
 from bear_hug.event import BearEventDispatcher, BearEvent
 from bear_hug.resources import Atlas, XpLoader
@@ -15,8 +15,8 @@ from bear_hug.widgets import ClosingListener, Widget, FPSCounter, MousePosWidget
     Layout, LoggingListener, SimpleAnimationWidget, Animation,\
     MultipleAnimationWidget, deserialize_widget, SwitchingWidget
 
+import json
 import sys
-
 
 class DevMonitor(Layout):
     """
@@ -169,7 +169,27 @@ def create_barrel(atlas, dispatcher, x, y):
                                    event_value=barrel_entity))
     dispatcher.add_event(BearEvent(event_type='ecs_add',
                                    event_value=('Barrel', x, y)))
+    # print(repr(barrel_entity), file=open('test_barrel.json', mode='w'))
 
+
+def create_second_barrel(dispatcher):
+    """
+    Creates barrel by reading JSON from 'test_barrel.json'
+    :param atlas:
+    :param dispatcher:
+    :return:
+    """
+    for line in open('test_barrel.json'):
+        pass
+    print(line)
+    barrel = deserialize_entity(line, dispatcher)
+    dispatcher.add_event(BearEvent(event_type='ecs_create',
+                                   event_value=barrel))
+    dispatcher.add_event(BearEvent(event_type='ecs_add',
+                                   event_value=(barrel.id,
+                                                barrel.position.x,
+                                                barrel.position.y)))
+    
     
 t = BearTerminal(font_path='bear_hug/demo_assets/cp437_12x12.png',
                  size='85x60', title='Brutality',
@@ -186,6 +206,7 @@ dispatcher.register_listener(layout, 'all')
 
 create_cop(atlas, dispatcher, 5, 5)
 create_barrel(atlas, dispatcher, 20, 6)
+create_second_barrel(dispatcher)
 # Dev monitor, works outside ECS
 monitor = DevMonitor(*atlas.get_element('dev_bg'), dispatcher=dispatcher)
 dispatcher.register_listener(monitor, ['tick', 'service'])
