@@ -13,7 +13,7 @@ from bear_hug.resources import Atlas, XpLoader
 from bear_hug.sound import SoundListener
 from bear_hug.widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
     Layout, LoggingListener, SimpleAnimationWidget, Animation,\
-    MultipleAnimationWidget, deserialize_widget, SwitchingWidget
+    MultipleAnimationWidget, deserialize_widget, SwitchingWidget, deserialize_animation
 
 import json
 import sys
@@ -151,9 +151,12 @@ class TestTickerComponent(Component):
             
 def create_barrel(atlas, dispatcher, x, y):
     barrel_entity = Entity(id='Barrel')
-    widget = SimpleAnimationWidget(Animation((atlas.get_element('barrel_1'),
-                                    atlas.get_element('barrel_2')), 2),
-                                    emit_ecs= True)
+    # widget = SimpleAnimationWidget(Animation((atlas.get_element('barrel_1'),
+    #                                 atlas.get_element('barrel_2')), 2),
+    #                                 emit_ecs= True)
+    # print(repr(widget.animation))
+    widget = SimpleAnimationWidget(deserialize_animation('{"fps": 2, "frame_ids": ["barrel_1", "barrel_2"], "storage_type": "atlas"}',
+                                                         atlas=atlas))
     # Testing JSON dump of SwitchingWidget
     # w = SwitchingWidget(images_dict={'a': atlas.get_element('barrel_1'),
     #                                  'b': atlas.get_element('barrel_2')},

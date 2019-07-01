@@ -5,6 +5,13 @@ for simpler games and apps. However, for the sake of clearer architecture,
 entities are recommended.
 """
 
+# TODO: rebuild JSON serialization system to avoid dumping Widgets altogether
+# This is essentially mixing up model and view, which is generally bad. However,
+# it has marginal benefits (for dumping procedurally generated and/or edited
+# widgets within entities. Although actually it exists mostly because I want a
+# functional dumping system right now, and disentangling them would make
+# WidgetComponent serializer a huge mess.
+
 import inspect
 
 from bear_hug.bear_hug import BearTerminal
@@ -27,8 +34,11 @@ def deserialize_widget(serial):
     # TODO: support getting chars and colors for deserialization from atlas
     # As of now, chars and colors are always dumped with the widget. Maybe some
     # widget children (but definitely not the base Widget class) could remember
-    # the ID of their image in atlas and dump just that. That would reduce the
-    # dump size at the cost of complicating deserialization interface
+    # the ID of their image in atlas and dump just that.
+    #
+    # A similar problem is present in Animation serializer, so a solution may be
+    # there
+    
     if isinstance(serial, str):
         d = loads(serial)
     elif isinstance(serial, dict):
@@ -49,7 +59,7 @@ def deserialize_widget(serial):
     types = [x for x in d if '_type' in x]
     for t in types:
         del(d[t])
-    # Try to get the Component class from where the function was imported, or
+    # Try to get the Widget subclass from where the function was imported, or
     # the importers of *that* frame. Without this, the function would only see
     # classes from this very file, or ones imported into it, and that would
     # break the deserialization of custom components.
@@ -73,6 +83,26 @@ def deserialize_widget(serial):
     return class_var([[char for char in x] for x in d['chars']],
                      [x.split(',') for x in d['colors']],
                      **kwargs)
+
+
+def deserialize_animation(serial, atlas=None):
+    """
+    Deserialize an animation from JSON dump
+    :param serial:
+    :return:
+    """
+    # TODO: document Animation serialization protocol in Anim docstring
+    d = loads(serial)
+    if d['storage_type'] == 'atlas':
+        return Animation(frames=[atlas.get_element(x) for x in d['frame_ids']],
+                         fps=d['fps'])
+    elif d['storage_type'] == 'dump':
+        return Animation(frames=[[[[char for char in x] for x in frame[0]],
+                                  [x.split(',') for x in frame[1]]]
+                                 for frame in d['frames']],
+                         fps=d['fps'])
+    else:
+        raise BearJSONException(f"Incorrect Animation storage_type: {d['storage_type']}")
 
 
 class Widget:
@@ -697,17 +727,47 @@ class InputScrollable(Layout):
 class Animation:
     """
     A data class for animation, ie the sequence of the frames
+    
+    If an optional `frame_ids` kwarg is set, these IDs will be dumped in the
+    Animation serialization and deserializer will attempt to take them from
+    whichever atlas it was supplied. Since this class has no idea of atlases,
+    their validity is not checked until deserialization and, if incorrect, a
+    dump will cause problems.
     """
-    def __init__(self, frames, fps):
+    def __init__(self, frames, fps, frame_ids=None):
         if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
                 or not all(
                 (shapes_equal(x[1], frames[0][1]) for x in frames[1:])):
             raise BearException('Frames should be equal size')
+        if frame_ids:
+            if len(frame_ids) != len(frames):
+                raise BearJSONException('Incorrect frame_ids length during Animation creation')
+            else:
+                self.frame_ids = frame_ids
         self.frames = frames
+        self.fps = fps # For deserialization
         self.frame_time = 1 / fps
 
     def __len__(self):
         return len(self.frames)
+    
+    def __repr__(self):
+        d = {'fps': self.fps}
+        if hasattr(self, 'frame_ids'):
+            d['storage_type'] = 'atlas'
+            d['frame_ids'] = 'frame_ids'
+        else:
+            frames_dump = []
+            for frame in self.frames:
+                char_strings = [''.join(x) for x in frame[0]]
+                for string in char_strings:
+                    string.replace('\"', '\u0022"').replace('\\', '\u005c')
+                colors_dump = [','.join(x) for x in frame[1]]
+                frames_dump.append([char_strings, colors_dump])
+            d['frames'] = frames_dump
+            d['storage_type'] = 'dump'
+        return dumps(d)
+        
 
 
 class SimpleAnimationWidget(Widget):
