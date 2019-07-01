@@ -24,7 +24,7 @@ from json import dumps, loads
 from time import time
 
 
-def deserialize_widget(serial):
+def deserialize_widget(serial, atlas=None):
     """
     Provided a JSON string, return a widget it encodes.
     :param json_string:
@@ -32,12 +32,8 @@ def deserialize_widget(serial):
     :return:
     """
     # TODO: support getting chars and colors for deserialization from atlas
-    # As of now, chars and colors are always dumped with the widget. Maybe some
-    # widget children (but definitely not the base Widget class) could remember
-    # the ID of their image in atlas and dump just that.
-    #
-    # A similar problem is present in Animation serializer, so a solution may be
-    # there
+    # In animation, it is achieved by storing source IDs in __init__. Not
+    # certain if it'd be safe for Widgets with all their complexity
     
     if isinstance(serial, str):
         d = loads(serial)
@@ -74,15 +70,22 @@ def deserialize_widget(serial):
     for key in d:
         if key in {'class', 'chars', 'colors'}:
             continue
-        if key in converters:
+        elif key in converters:
             kwargs[key] = converters[key](d[key])
+        elif key == 'animation':
+            # animation deserializer will raise exception if atlas is not supplied
+            kwargs['animation'] = deserialize_animation(d['animation'], atlas)
         else:
             kwargs[key] = d[key]
     # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
-    # Chars and colors are not kwargs
-    return class_var([[char for char in x] for x in d['chars']],
-                     [x.split(',') for x in d['colors']],
-                     **kwargs)
+    if 'chars' in d:
+        # Chars and colors are not kwargs
+        return class_var([[char for char in x] for x in d['chars']],
+                         [x.split(',') for x in d['colors']],
+                         **kwargs)
+    else:
+        # Some classes, eg animation widgets, do not dump chars and colors
+        return class_var(**kwargs)
 
 
 def deserialize_animation(serial, atlas=None):
@@ -91,9 +94,10 @@ def deserialize_animation(serial, atlas=None):
     :param serial:
     :return:
     """
-    # TODO: document Animation serialization protocol in Anim docstring
     d = loads(serial)
     if d['storage_type'] == 'atlas':
+        if not atlas:
+            raise BearJSONException('Animation storage type set to atlas, but atlas was not supplied')
         return Animation(frames=[atlas.get_element(x) for x in d['frame_ids']],
                          fps=d['fps'])
     elif d['storage_type'] == 'dump':
@@ -775,7 +779,6 @@ class Animation:
         return dumps(d)
         
 
-
 class SimpleAnimationWidget(Widget):
     """
     A simple animated widget that cycles through the frames.
@@ -818,6 +821,11 @@ class SimpleAnimationWidget(Widget):
             self.terminal.update_widget(self)
 
     def __repr__(self):
+        d = {'class': self.__class__.__name__,
+             'animation': repr(self.animation),
+             'emit_ecs': self.emit_ecs}
+        return dumps(d)
+
 
 class MultipleAnimationWidget(Widget):
     """
@@ -885,6 +893,16 @@ class MultipleAnimationWidget(Widget):
         self.current_animation = anim_id
         self.cycle = cycle
         self.am_running = True
+        
+    def __repr__(self):
+        d = {'class': self.__class__.__name__,
+             'animations': {x: repr(self.animations[x])
+                            for x in self.animations},
+             # Start from whichever animation was displayed during saving
+             'initial_animation': self.current_animation,
+             'emit_ecs': self.emit_ecs,
+             'cycle': self.cycle}
+        return dumps(d)
 
 
 # Functional widgets. Please note that these include no decoration, BG, frame or

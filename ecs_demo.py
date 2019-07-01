@@ -151,12 +151,9 @@ class TestTickerComponent(Component):
             
 def create_barrel(atlas, dispatcher, x, y):
     barrel_entity = Entity(id='Barrel')
-    # widget = SimpleAnimationWidget(Animation((atlas.get_element('barrel_1'),
-    #                                 atlas.get_element('barrel_2')), 2),
-    #                                 emit_ecs= True)
-    # print(repr(widget.animation))
-    widget = SimpleAnimationWidget(deserialize_animation('{"fps": 2, "frame_ids": ["barrel_1", "barrel_2"], "storage_type": "atlas"}',
-                                                         atlas=atlas))
+    widget = SimpleAnimationWidget(Animation((atlas.get_element('barrel_1'),
+                                    atlas.get_element('barrel_2')), 2),
+                                    emit_ecs= True)
     # Testing JSON dump of SwitchingWidget
     # w = SwitchingWidget(images_dict={'a': atlas.get_element('barrel_1'),
     #                                  'b': atlas.get_element('barrel_2')},
@@ -172,7 +169,9 @@ def create_barrel(atlas, dispatcher, x, y):
                                    event_value=barrel_entity))
     dispatcher.add_event(BearEvent(event_type='ecs_add',
                                    event_value=('Barrel', x, y)))
-    # print(repr(barrel_entity), file=open('test_barrel.json', mode='w'))
+    # Uncomment this to refresh the barrel dump
+    # with open('test_barrel.json', mode='w') as outfile:
+    #     print(repr(barrel_entity), file=outfile)
 
 
 def create_second_barrel(dispatcher):
@@ -184,7 +183,6 @@ def create_second_barrel(dispatcher):
     """
     for line in open('test_barrel.json'):
         pass
-    print(line)
     barrel = deserialize_entity(line, dispatcher)
     dispatcher.add_event(BearEvent(event_type='ecs_create',
                                    event_value=barrel))
