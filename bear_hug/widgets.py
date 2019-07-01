@@ -728,11 +728,17 @@ class Animation:
     """
     A data class for animation, ie the sequence of the frames
     
-    If an optional `frame_ids` kwarg is set, these IDs will be dumped in the
-    Animation serialization and deserializer will attempt to take them from
-    whichever atlas it was supplied. Since this class has no idea of atlases,
-    their validity is not checked until deserialization and, if incorrect, a
-    dump will cause problems.
+    Animation is serialized to JSON, preserving fps and either frame dumps
+    (similarly to widget chars and colors) or frame image IDs. For the latter to
+    work, these IDs should be provided during Animation creation via an optional
+    `frame_ids` kwarg. The deserializer will then use them with whichever atlas
+    is supplied to create the animation.
+    
+    Since this class has no idea of atlases and is unaware whether it was
+    created with the same atlas as deserializer will use (which REALLY should be
+    the same, doing otherwise is just asking for trouble), frame ID validity is
+    not checked until deserialization and, if incorrect, are not guaranteed to
+    work.
     """
     def __init__(self, frames, fps, frame_ids=None):
         if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
@@ -811,6 +817,7 @@ class SimpleAnimationWidget(Widget):
             # itself without a layout
             self.terminal.update_widget(self)
 
+    def __repr__(self):
 
 class MultipleAnimationWidget(Widget):
     """
