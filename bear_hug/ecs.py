@@ -138,7 +138,10 @@ class Component(Listener):
         pass
 
     def __repr__(self):
-        raise NotImplementedError('Component __repr__ should be overloaded to generate a valid JSON')
+        # The most basic serialization. Just states that an Entity has a
+        # component of this class, but stores no data
+        d = {'class': self.__class__.__name__}
+        return dumps(d)
 
     def __str__(self):
         owner = self.owner.id if self.owner else 'nobody'
@@ -180,8 +183,8 @@ class WidgetComponent(Component):
         return self.widget.size
     
     def __repr__(self):
-        d = {'class': 'WidgetComponent',
-             'widget': loads(repr(self.widget))}
+        d = {'widget': loads(repr(self.widget)),
+             'class': self.__class__.__name__}
         return dumps(d)
 
 
