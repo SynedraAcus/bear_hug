@@ -280,47 +280,50 @@ class PositionComponent(Component):
         return dumps(d)
                 
 
-class SpawnerComponent(Component):
-    """
-    A component responsible for creating other entities. A current
-    implementation is pretty much deprecated. It can produce only a single
-    Entity type; in addition, it stores a callable to determine what to spawn
-    and therefore can not be serialized via `repr()`. Attempt to serialize
-    causes BearECSException to be raised.
-    
-    :param to_spawn: A callable that returns an Entity to be created. The entity
-    needs to have `widget` and `position` components.
-    :param relative_pos: a starting position of a spawned Entity, relative to
-    self.
-    """
-    #TODO: rewrite demos to deprecate this piece of shit.
-    # The BRUTALITY project has a better SpawnerComponent, but that one spawns
-    # entities. See brutality/components.py and brutality/entities.py
-    def __init__(self, dispatcher, to_spawn, relative_pos=(0, 0), owner=None):
-        super().__init__(dispatcher, name='spawner', owner=owner)
-        self.to_spawn = to_spawn
-        self.relative_pos = relative_pos
-        self.id_count = 0
-        
-    def create_entity(self):
-        entity = self.to_spawn()
-        for component in (entity.__dict__[c] for c in entity.components):
-            component.dispatcher = self.dispatcher
-        entity.id += str(self.id_count)
-        self.id_count += 1
-        entity.position.move(self.owner.position.x + self.relative_pos[0],
-                             self.owner.position.y + self.relative_pos[1],
-                             emit_event=False)
-        self.dispatcher.add_event(BearEvent(event_type='ecs_create',
-                                            event_value=entity))
-        self.dispatcher.add_event(BearEvent(event_type='ecs_add',
-                                            event_value=(entity.id,
-                                                         entity.position.x,
-                                                         entity.position.y)))
+#TODO: rewrite demos to deprecate this piece of shit.
+# The BRUTALITY project has a better SpawnerComponent, but that one spawns
+# entities. See brutality/components.py and brutality/entities.py
+# Currently old SpawnerComponent is commented out because it overrides the
+# good one when calling `deserialize_component` for Spawners
 
-    def __repr__(self):
-        # See class docstring
-        raise BearJSONException('Tried to dump SpawnerComponent')
+#class SpawnerComponent(Component):
+#    """
+#    A component responsible for creating other entities. A current
+#    implementation is pretty much deprecated. It can produce only a single
+#    Entity type; in addition, it stores a callable to determine what to spawn
+#    and therefore can not be serialized via `repr()`. Attempt to serialize
+#    causes BearECSException to be raised.
+#    
+#    :param to_spawn: A callable that returns an Entity to be created. The entity
+#    needs to have `widget` and `position` components.
+#    :param relative_pos: a starting position of a spawned Entity, relative to
+#    self.
+#    """
+#   def __init__(self, dispatcher, to_spawn, relative_pos=(0, 0), owner=None):
+#        super().__init__(dispatcher, name='spawner', owner=owner)
+#        self.to_spawn = to_spawn
+#        self.relative_pos = relative_pos
+#        self.id_count = 0
+#        
+#    def create_entity(self):
+#        entity = self.to_spawn()
+#        for component in (entity.__dict__[c] for c in entity.components):
+#            component.dispatcher = self.dispatcher
+#        entity.id += str(self.id_count)
+#        self.id_count += 1
+#        entity.position.move(self.owner.position.x + self.relative_pos[0],
+#                             self.owner.position.y + self.relative_pos[1],
+#                             emit_event=False)
+#        self.dispatcher.add_event(BearEvent(event_type='ecs_create',
+#                                            event_value=entity))
+#        self.dispatcher.add_event(BearEvent(event_type='ecs_add',
+#                                            event_value=(entity.id,
+#                                                         entity.position.x,
+#                                                         entity.position.y)))
+#
+#    def __repr__(self):
+#        # See class docstring
+#        raise BearJSONException('Tried to dump SpawnerComponent')
 
 
 class DestructorComponent(Component):
@@ -403,13 +406,16 @@ def deserialize_component(serial, dispatcher):
     # the importers of *that* frame. Without this, the function would only see
     # classes from this very file, or ones imported into it, and that would
     # break the deserialization of custom components.
+    class_var = None
     for frame in inspect.getouterframes(inspect.currentframe()):
         if d['class'] in frame.frame.f_globals:
             class_var = frame.frame.f_globals[d['class']]
             break
     del frame
+    if not class_var:
+        raise BearJSONException(f"Class name {class_var} not imported anywhere in the frame stack")
     if not issubclass(class_var, Component):
-        raise BearJSONException(f"Class name {d['class']}mapped to something other than a Component subclass")
+        raise BearJSONException(f"Class name {class_var}mapped to something other than a Component subclass")
     kwargs = {}
     for key in d:
         if key == 'class':

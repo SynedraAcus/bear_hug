@@ -59,11 +59,14 @@ def deserialize_widget(serial, atlas=None):
     # the importers of *that* frame. Without this, the function would only see
     # classes from this very file, or ones imported into it, and that would
     # break the deserialization of custom components.
+    class_var = None
     for frame in inspect.getouterframes(inspect.currentframe()):
         if d['class'] in frame.frame.f_globals:
             class_var = frame.frame.f_globals[d['class']]
             break
     del frame
+    if not class_var:
+        raise BearJSONException(f"Class name {d['class']} not imported anywhere in frame stack")
     if not issubclass(class_var, Widget):
         raise BearJSONException(f"Class name {d['class']}mapped to something other than a Widget subclass")
     kwargs = {}
@@ -77,11 +80,10 @@ def deserialize_widget(serial, atlas=None):
             kwargs['animation'] = deserialize_animation(d['animation'], atlas)
         else:
             kwargs[key] = d[key]
-    # kwargs = {x: d[x] for x in d.keys() if x != 'class'}
     if 'chars' in d:
         # Chars and colors are not kwargs
-        return class_var([[char for char in x] for x in d['chars']],
-                         [x.split(',') for x in d['colors']],
+        return class_var(chars=[[char for char in x] for x in d['chars']],
+                         colors=[x.split(',') for x in d['colors']],
                          **kwargs)
     else:
         # Some classes, eg animation widgets, do not dump chars and colors
@@ -264,7 +266,7 @@ class SwitchingWidget(Widget):
     Does not do any transition animations.
     """
     
-    def __init__(self, images_dict=None, initial_image=None, chars=None, colors=None):
+    def __init__(self, chars=None, colors=None, images_dict=None, initial_image=None):
         # Chars and colors are not used anywhere; they are included simply for
         # the compatibility with serialization. Actual chars and colors of the
         # SwitchingWidget are set to `images_dict[initial_image]` upon creation
@@ -304,13 +306,14 @@ class SwitchingWidget(Widget):
                     f'Attempting to switch to incorrect image ID {image_id}')
             
     def __repr__(self):
-        d = loads(super().__repr__())
-        d['initial_image'] = self.current_image
+        d = {'class': self.__class__.__name__,
+             'initial_image': self.current_image}
         images = {}
         for image in self.images:
             images[image] = []
-            images[image].append([''.join(x).replace('\"', '\u0022"').
-                                             replace('\\', '\u005c')
+            # Seems to work without any complex workarounds for screening
+            images[image].append([''.join(x)#.replace('"', '\u0022"').
+                                            # replace('\\', '\u005c')
                                   for x in self.images[image][0]])
             images[image].append([','.join(x) for x in self.images[image][1]])
         d['images_dict'] = images
