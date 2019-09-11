@@ -390,7 +390,8 @@ class Layout(Widget):
             raise BearLayoutException('Child won\'t fit at this position')
         if child is self:
             raise BearLayoutException('Cannot add Layout as its own child')
-        self.children.append(child)
+        if not skip_checks:
+            self.children.append(child)
         self.child_locations[child] = pos
         child.terminal = self.terminal
         child.parent = self
