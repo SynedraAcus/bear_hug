@@ -217,7 +217,31 @@ class PositionComponent(Component):
     @property
     def y(self):
         return self._y
-    
+
+    @property
+    def vx(self):
+        return self._vx
+
+    @vx.setter
+    def vx(self, value):
+        self._vx = value
+        if value != 0:
+            self.x_delay = abs(1/self._vx)
+        else:
+            self.x_delay = None
+
+    @property
+    def vy(self):
+        return self._vy
+
+    @vy.setter
+    def vy(self, value):
+        self._vy = value
+        if value != 0:
+            self.y_delay = abs(1/self._vy)
+        else:
+            self.y_delay = None
+
     def move(self, x, y, emit_event=True):
         """
         Move the Entity to a specified position.
@@ -254,14 +278,14 @@ class PositionComponent(Component):
             if self.vx or self.vy:
                 self.x_waited += event.event_value
                 self.y_waited += event.event_value
-                if self.vx and self.x_waited > self.x_delay:
+                if self.x_delay and self.x_waited > self.x_delay:
                     new_x = self.x + round(self.x_waited/self.x_delay)\
                         if self.vx > 0\
                         else self.x - round(self.x_waited/self.x_delay)
                     self.x_waited = 0
                 else:
                     new_x = self.x
-                if self.vy and self.y_waited > self.y_delay:
+                if self.y_delay and self.y_waited > self.y_delay:
                     new_y = self.y + round(self.x_waited/self.x_delay)\
                         if self.vy > 0\
                         else self.y - round(self.x_waited/self.x_delay)
@@ -347,7 +371,7 @@ class DestructorComponent(Component):
         self.dispatcher.add_event(BearEvent('ecs_destroy', self.owner.id))
         self.is_destroying = True
         # Destroys item on the 'tick_over', so that all
-        # existing events involving owner (including 'ecs_remove' are processed
+        # existing events involving owner (including 'ecs_remove)' are processed
         # normally, but unsubscribes it right now to prevent new ones from forming
         for component in self.owner.components:
             if component != self.name:
