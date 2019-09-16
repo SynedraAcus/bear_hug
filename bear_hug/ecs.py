@@ -43,7 +43,6 @@ class Entity:
         :return:
         """
         if not isinstance(component, Component):
-            print(component)
             raise BearECSException('Only Component instance can be added' +
                                    ' as an entity\'s component')
         if component.name not in self.components and \
@@ -165,7 +164,7 @@ class WidgetComponent(Component):
         super().__init__(dispatcher=dispatcher, name='widget', owner=owner)
         self.widget = widget
         if self.dispatcher:
-            self.dispatcher.register_listener(self.widget, 'tick')
+            self.dispatcher.register_listener(self, 'tick')
 
     def on_event(self, event):
         return self.widget.on_event(event)
@@ -200,12 +199,10 @@ class PositionComponent(Component):
         self._x = x
         self._y = y
         self.vx = vx
-        if self.vx:
-            self.x_delay = abs(1/self.vx)
-        self.x_waited = 0
         self.vy = vy
-        if self.vy:
-            self.y_delay = abs(1/self.vy)
+        self.x_delay = None
+        self.y_delay = None
+        self.x_waited = 0
         self.y_waited = 0
         if self.dispatcher:
             dispatcher.register_listener(self, 'tick')
@@ -286,9 +283,9 @@ class PositionComponent(Component):
                 else:
                     new_x = self.x
                 if self.y_delay and self.y_waited > self.y_delay:
-                    new_y = self.y + round(self.x_waited/self.x_delay)\
+                    new_y = self.y + round(self.y_waited/self.y_delay)\
                         if self.vy > 0\
-                        else self.y - round(self.x_waited/self.x_delay)
+                        else self.y - round(self.y_waited/self.y_delay)
                     self.y_waited = 0
                 else:
                     new_y = self.y
@@ -380,12 +377,12 @@ class DestructorComponent(Component):
     
     def on_event(self, event):
         if self.is_destroying and event.event_type == 'service' and event.event_value == 'tick_over':
-            print(self.is_destroying)
             # owner.components stores IDs, not component objects themselves.
             # Those are available only from owner.__dict__
             victims = [x for x in self.owner.components]
             for component in victims:
                 if component is not self.name:
+                    self.dispatcher.unregister_listener(self.owner.__dict__[component])
                     self.owner.remove_component(component)
             self.dispatcher.unregister_listener(self)
             self.owner.remove_component(self.name)
