@@ -198,15 +198,15 @@ class PositionComponent(Component):
         super().__init__(dispatcher, name='position', owner=owner)
         self._x = x
         self._y = y
-        self.vx = vx
-        self.vy = vy
         self.x_delay = None
         self.y_delay = None
         self.x_waited = 0
         self.y_waited = 0
+        self.vx = vx
+        self.vy = vy
         if self.dispatcher:
             dispatcher.register_listener(self, 'tick')
-        
+
     @property
     def x(self):
         return self._x
