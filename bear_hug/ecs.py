@@ -14,7 +14,8 @@ in particular, all its components should be subscribed to the appropriate events
 """
 import inspect
 
-from bear_hug.bear_utilities import BearECSException, BearJSONException
+from bear_hug.bear_utilities import BearECSException, BearJSONException, \
+    rectangles_collide
 from bear_hug.widgets import Widget, Listener, deserialize_widget
 from bear_hug.event import BearEvent, BearEventDispatcher
 
@@ -145,6 +146,52 @@ class Component(Listener):
     def __str__(self):
         owner = self.owner.id if self.owner else 'nobody'
         return f'{type(self).__name__} at {id(self)} attached to {owner}'
+
+
+# Copypasting SO is the only correct way to program
+# https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args,
+                                                                 **kwargs)
+        return cls._instances[cls]
+
+
+class EntityTracker(Listener, metaclass=Singleton):
+    """
+    Listens to the ecs_add and ecs_destroy events and keeps track of all the
+    currently existing entities.
+
+    This tracker is used for entity lookup, eg by Components that need to find
+    all possible entities that fulfill certain criteria
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.entities = {}
+
+    def on_event(self, event):
+        if event.event_type == 'ecs_create':
+            self.entities[event.event_value.id] = event.event_value
+        elif event.event_type == 'ecs_destroy':
+            del self.entities[event.event_value]
+
+    def filter_entities(self, key=lambda x: x):
+        """
+        Return all entities for which key evaluates to True.
+
+        Note that this method returns entity objects themselves, not the IDs.
+        :param key: A single-arg callable
+        :return:
+        """
+        if not hasattr(key, '__call__'):
+            raise ValueError('EntityTracker requires callable for a key')
+        for entity_id in self.entities:
+            if key(self.entities[entity_id]):
+                yield self.entities[entity_id]
 
 
 class WidgetComponent(Component):
@@ -301,52 +348,6 @@ class PositionComponent(Component):
         return dumps(d)
                 
 
-#TODO: rewrite demos to deprecate this piece of shit.
-# The BRUTALITY project has a better SpawnerComponent, but that one spawns
-# entities. See brutality/components.py and brutality/entities.py
-# Currently old SpawnerComponent is commented out because it overrides the
-# good one when calling `deserialize_component` for Spawners
-
-#class SpawnerComponent(Component):
-#    """
-#    A component responsible for creating other entities. A current
-#    implementation is pretty much deprecated. It can produce only a single
-#    Entity type; in addition, it stores a callable to determine what to spawn
-#    and therefore can not be serialized via `repr()`. Attempt to serialize
-#    causes BearECSException to be raised.
-#    
-#    :param to_spawn: A callable that returns an Entity to be created. The entity
-#    needs to have `widget` and `position` components.
-#    :param relative_pos: a starting position of a spawned Entity, relative to
-#    self.
-#    """
-#   def __init__(self, dispatcher, to_spawn, relative_pos=(0, 0), owner=None):
-#        super().__init__(dispatcher, name='spawner', owner=owner)
-#        self.to_spawn = to_spawn
-#        self.relative_pos = relative_pos
-#        self.id_count = 0
-#        
-#    def create_entity(self):
-#        entity = self.to_spawn()
-#        for component in (entity.__dict__[c] for c in entity.components):
-#            component.dispatcher = self.dispatcher
-#        entity.id += str(self.id_count)
-#        self.id_count += 1
-#        entity.position.move(self.owner.position.x + self.relative_pos[0],
-#                             self.owner.position.y + self.relative_pos[1],
-#                             emit_event=False)
-#        self.dispatcher.add_event(BearEvent(event_type='ecs_create',
-#                                            event_value=entity))
-#        self.dispatcher.add_event(BearEvent(event_type='ecs_add',
-#                                            event_value=(entity.id,
-#                                                         entity.position.x,
-#                                                         entity.position.y)))
-#
-#    def __repr__(self):
-#        # See class docstring
-#        raise BearJSONException('Tried to dump SpawnerComponent')
-
-
 class DestructorComponent(Component):
     """
     A component responsible for cleanly destroying its entity and everything
@@ -391,6 +392,138 @@ class DestructorComponent(Component):
         d = {'class': self.__class__.__name__,
              'is_destroying': self.is_destroying} # Could be saved right in the middle of destruction
         return dumps(d)
+
+
+class CollisionComponent(Component):
+    """
+    A component responsible for processing collisions of this object
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name='collision', **kwargs)
+        self.dispatcher.register_listener(self, 'ecs_collision')
+
+    def on_event(self, event):
+        if event.event_type == 'ecs_collision':
+            if event.event_value[0] == self.owner.id:
+                self.collided_into(event.event_value[1])
+            elif event.event_value[1] == self.owner.id:
+                self.collided_by(event.event_value[0])
+
+    def collided_into(self, entity):
+        pass
+
+    def collided_by(self, entity):
+        pass
+
+
+class WalkerCollisionComponent(CollisionComponent):
+    """
+    A collision component that, upon colliding into something impassable,
+    moves the entity to where it came from. Expects both entities involved to
+    have a PassabilityComponent
+    """
+
+    def collided_into(self, entity):
+        if entity is not None:
+            other = EntityTracker().entities[entity]
+            if 'passability' in self.owner.__dict__ and 'passability' in other.__dict__:
+                if rectangles_collide((self.owner.position.x +
+                                       self.owner.passability.shadow_pos[0],
+                                       self.owner.position.y +
+                                       self.owner.passability.shadow_pos[1]),
+                                      self.owner.passability.shadow_size,
+                                      (other.position.x +
+                                       other.passability.shadow_pos[0],
+                                       other.position.y +
+                                       other.passability.shadow_pos[1]),
+                                      other.passability.shadow_size):
+                    self.owner.position.relative_move(
+                        self.owner.position.last_move[0] * -1,
+                        self.owner.position.last_move[1] * -1)
+        else:
+            # Processing collisions with screen edges without involving passability
+            self.owner.position.relative_move(
+                self.owner.position.last_move[0] * -1,
+                self.owner.position.last_move[1] * -1)
+
+
+class PassingComponent(Component):
+    """
+    A component responsible for knowing whether items can or cannot be walked
+    through.
+
+    Unlike collisions of eg projectiles, walkers can easily collide with screen
+    items and each other provided they are "behind" or "ahead" of each other. To
+    check for that, PassingComponent stores a sort of hitbox (basically the
+    projection on the surface, something like lowest three rows for a
+    human-sized object). Then, WalkerCollisionComponent uses those to define
+    if walk attempt was unsuccessful.
+
+    All entities that do not have this component are assumed to be passable.
+    """
+
+    def __init__(self, *args, shadow_pos=(0, 0), shadow_size=None, **kwargs):
+        super().__init__(*args, name='passability', **kwargs)
+        self.shadow_pos = shadow_pos
+        self._shadow_size = shadow_size
+
+    @property
+    def shadow_size(self):
+        # TODO: remove the ugly shadow size hack
+        # The idea is that shadow size can be set to owner's widget size by
+        # default. The only issue is that owner may not be set, or may not have
+        # a widget yet, when this component is created. Thus, this hack.
+        # Hopefully no one will try and walk into the object before it is shown
+        # on screen. Alas, it requires calling a method for a frequently used
+        # property and is generally pretty ugly. Remove this if I ever get to
+        # optimizing and manage to think of something better.
+        if self._shadow_size is None:
+            self._shadow_size = self.owner.widget.size
+        return self._shadow_size
+
+    def __repr__(self):
+        d = {'class': self.__class__.__name__,
+             'shadow_size': self._shadow_size,
+             'shadow_pos': self.shadow_pos}
+        return dumps(d)
+
+
+class DecayComponent(Component):
+    """
+    Attaches to an entity and destroys it when conditions are met.
+
+    Currently supported destroy conditions are 'keypress' and 'timeout'. If the
+    latter is set, you can supply the lifetime (defaults to 1.0 sec)
+    """
+
+    def __init__(self, *args, destroy_condition='keypress', lifetime=1.0, age=0,
+                 **kwargs):
+        super().__init__(*args, name='decay', **kwargs)
+        if destroy_condition == 'keypress':
+            self.dispatcher.register_listener(self, 'key_down')
+        elif destroy_condition == 'timeout':
+            self.dispatcher.register_listener(self, 'tick')
+            self.lifetime = lifetime
+            self.age = age
+        else:
+            raise ValueError(
+                f'destroy_condition should be either keypress or timeout')
+        self.destroy_condition = destroy_condition
+
+    def on_event(self, event):
+        if self.destroy_condition == 'keypress' and event.event_type == 'key_down':
+            self.owner.destructor.destroy()
+        elif self.destroy_condition == 'timeout' and event.event_type == 'tick':
+            self.age += event.event_value
+            if self.age >= self.lifetime:
+                self.owner.destructor.destroy()
+
+    def __repr__(self):
+        return dumps({'class': self.__class__.__name__,
+                      'destroy_condition': self.destroy_condition,
+                      'lifetime': self.lifetime,
+                      'age': self.age})
 
 
 def deserialize_component(serial, dispatcher):
