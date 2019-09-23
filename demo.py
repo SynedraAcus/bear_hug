@@ -114,25 +114,6 @@ class DevMonitor(Layout):
         self.add_child(self.mouser, (2, 7))
 
 
-class InputScrollable(ScrollableLayout):
-    """
-    A ScrollableLayout subclass that accepts input events
-    """
-    def on_event(self, event):
-        if event.event_type == 'key_down':
-            if event.event_value == 'TK_DOWN':
-                self.scroll_by((0, 1))
-            elif event.event_value == 'TK_UP':
-                self.scroll_by((0, -1))
-            elif event.event_value == 'TK_RIGHT':
-                self.scroll_by((1, 0))
-            elif event.event_value == 'TK_LEFT':
-                self.scroll_by((-1, 0))
-            elif event.event_type == 'TK_SPACE':
-                self.scroll_to((0, 0))
-        super().on_event(event)
-
-        
 t = BearTerminal(size='50x45', title='Test window', filter=['keyboard', 'mouse'])
 dispatcher = BearEventDispatcher()
 loop = BearLoop(t, dispatcher)
@@ -152,9 +133,6 @@ tank2 = Widget(*loader.get_image_region(6, 0, 5, 6))
 # XPLoader tests
 # A tree without layer2 apples
 xploader = XpLoader('bear_hug/demo_assets/tree_lamp.xp')
-tree2 = Widget(*xploader.get_layer_region(0, 0, 1, 6, 8))
-# Multilayered tree and single-layered lamp
-tree = Widget(*xploader.get_image_region(0, 1, 6, 8))
 lamp = Widget(*xploader.get_image_region(7, 1, 7, 8))
 
 # Monitor, with BG loaded from XP atlas and widgets added in monitor.__init__
@@ -169,22 +147,29 @@ anim = Animation((atlas.get_element('barrel_1'),
 barrel = SimpleAnimationWidget(anim)
 dispatcher.register_listener(barrel, ['tick', 'service'])
 
-# A ScrollableLayout test
-scrollable = InputScrollable([['.' for x in range(30)] for y in range(30)],
-                             [['gray' for x in range(30)] for y in range(30)],
-                             (1, 1), (10, 10))
-dispatcher.register_listener(scrollable, ['tick', 'key_down', 'service'])
-scrollable.add_child(barrel, pos=(0, 0))
-
-# Input field
-in_field = InputField(width=5)
-dispatcher.register_listener(in_field, ['key_down', 'key_up'])
-
+# A multi-lined text label
+label = Label(
+    """
+    This is a simple bear_hug test/demo.
+    If you can see the three images above
+    (a barrel, a tank, and a lamppost), all
+    atlases load OK. The barrel should be
+    animated.
+    
+    Try using L/R arrow keys
+    to change the number of fireworks in
+    the block below. Spacebar randomly changes
+    block colour.
+    
+    The block at bottom left should show FPS
+    and mouse position (in tiles).
+    """
+)
 t.start()
-t.add_widget(in_field, pos=(1, 1), layer=25)
-print(type(in_field.parent))
+t.add_widget(barrel, (1, 1))
+t.add_widget(tank1, (20, 1))
 t.add_widget(monitor, pos=(0, 35), layer=1)
+t.add_widget(label, pos=(1, 15))
 t.add_widget(box, (12, 35), layer=1)
 t.add_widget(lamp, (43, 1), layer=2)
-t.add_widget(scrollable, pos=(5, 5), layer=2)
 loop.run()
