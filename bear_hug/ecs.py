@@ -1,30 +1,56 @@
 """
 Entity-component system.
 
-Entities are just the sets of components, nothing more. The major way for them
-to be used should be components calling something like
-`self.owner.that_other_component.do_stuff` or emitting `ecs_*` events.
+Entities are just an ID and the container of components. The major way for them
+to do something useful should be components calling something like
+``self.owner.that_other_component.do_stuff()`` or emitting events.
 
 The creation of a new Entity is announced by the following event:
-`BearEvent(event_type='ecs_create', event_value=entity)`
+``BearEvent(event_type='ecs_create', event_value=entity)``
 
 It is the only event type that uses the actual entity object, not its ID, as the
-event_value. When this event is emitted, the entity should be ready to work,
-in particular, all its components should be subscribed to the appropriate events
+event_value. When this event is emitted, the entity should be ready to work;
+in particular, all its components should be subscribed to the appropriate events.
+
+Both Entities and Components can be serialized to JSON using ``repr(object)``
+and then deserialized.
 """
-import inspect
 
 from bear_hug.bear_utilities import BearECSException, BearJSONException, \
     rectangles_collide
 from bear_hug.widgets import Widget, Listener, deserialize_widget
 from bear_hug.event import BearEvent, BearEventDispatcher
 
+import inspect
 from json import dumps, loads
 
 
 class Entity:
     """
     A root entity class.
+
+    This is basically a container of components, and an ID.
+
+    Entity ID not checked for uniqueness during Entity creation, because it's
+    possible that the Entity object will be created before the queue is turned
+    on (and, therefore, before EntityTracker knows anything about any entities),
+    but having non-unique IDs is practically guaranteed to cause some
+    entertaining glitches.
+
+    When the component is added to the Entity, its name (a ``component.name``
+    attribute) is added to ``entity.__dict__``. This way, other components can
+    then address it as ``self.owner.position`` or ``self.owner.widget`` or
+    whatever. Names thus serve as something like slots, so that an entity
+    couldn't have multiple components for the same function. Possible names are
+    not restricted in any way, but it is strongly recommended not to change them
+    during inheritance between Component subclasses, and especially not to use
+    the same name for any two components that could ever possibly be used within
+    a single entity.
+
+    :param id: a string used as an Entity ID.
+
+    :param components: an iterable of Component instances that can will be added
+    to this entity.
     """
     
     def __init__(self, id='Default ID', components=[]):
@@ -35,13 +61,14 @@ class Entity:
         
     def add_component(self, component):
         """
-        Adds component to the Entity __dict__
-        Raises exception if the Component.name corresponds to one of the already
-        existing elements of __dict__ and isn't in self.components. The latter
-        check is to allow overwriting components while preventing them from
-        overwriting the builtin properties.
-        :param component:
-        :return:
+        Add a single component to the Entity.
+
+        Raises exception if ``Component.name`` is already in ``self.__dict__``
+        and not in ``self.components``. This allows overwriting
+        components (should you want to change eg the entity's widget), while
+        protecting the non-Component properties.
+
+        :param component: A Component instance.
         """
         if not isinstance(component, Component):
             raise BearECSException('Only Component instance can be added' +
@@ -55,6 +82,15 @@ class Entity:
         component.owner = self
     
     def remove_component(self, component_name):
+        """
+        Remove a single component from this entity.
+
+        Uses the ``Component.name``, not an actual instance, as an argument. If
+        the Entity doesn't have such a component, raises ``BearECSException``
+
+        :param component_name: The name of a component to remove
+        :return:
+        """
         if component_name in self.components:
             del(self.__dict__[component_name])
             self.components.remove(component_name)
@@ -73,37 +109,46 @@ class Component(Listener):
     A root component class.
     
     Component name is expected to be the same between all components of the same
-    class. Component inherits from Listener and is therefore able to receive and
-    return BearEvents. Of course, it needs the correct subscriptions to actually
-    get them.
+    general type (normally, a base class for a given function and all its
+    subclasses). Component inherits from Listener and is therefore able to
+    receive and return ``BearEvent``s. Of course, it needs the correct
+    subscriptions to actually get them.
 
-    `repr(component)` is used for serialization and should generate a valid
+    ``repr(component)`` is used for serialization and should generate a valid
     JSON-encoded dict. It should always include a 'class' key which
     should equal the class name for that component and will be used by a
     deserializer to determine what to create. All other keys will be
     deserialized and treated as kwargs to a newly-created object. To define the
     deserialization protocol, JSON dict may also contain keys formatted as
-    '{kwarg_name}_type' which should be a string and will be eval-ed as during
-    deserialization. Only Python's builtin converters (eg `str`, `int` or
-    `float`) are perfectly safe; custom ones are currently unsupported.
+    ``{kwarg_name}_type`` which should be a string and will be eval-ed as during
+    deserialization. Only Python's builtin converters (eg ``str``, ``int`` or
+    ``float``) are allowed; custom ones are currently unsupported.
+
     For example, the following is a valid JSON:
 
+    ```
     {"class": "TestComponent",
     "x": 5,
     "y": 5,
     "direction": "r",
     "former_owners": ["asd", "zxc", "qwe"],
     "former_owners_type": "set"}
+    ```
 
     Its deserialization is equivalent to the following call:
-    `x = TestComponent(x=5, y=5, direction='r',
-                       former_owners=set(['asd', 'zxc', 'qwe']))`
+
+    ``x = TestComponent(x=5, y=5, direction='r', former_owners=set(['asd', 'zxc', 'qwe']))``
 
     The following keys are forbidden: 'name', 'owner', 'dispatcher'. Kwarg
-    validity is not controlled except by `Component.__init__()`.
+    validity is not controlled except by ``Component.__init__()``.
 
+    :param dispatcher: A queue that the component should subscribe to. ``Component.__init__()`` may use this to subscribe to whatever events it needs.
+
+    :param name: A name that will be added to ``Entity.__dict__``. Should be hardcoded in all Component subclasses.
+
+    :param owner: the Entity (actual object, not ID) to which this object should attach.
     """
-    def __init__(self, dispatcher, name='Root component', owner=None):
+    def __init__(self, dispatcher, name='Root', owner=None):
         super().__init__()
         if not name:
             raise BearECSException('Cannot create a component without a name')
@@ -116,13 +161,14 @@ class Component(Listener):
             
     def set_owner(self, owner):
         """
-        Registers a component owner.
+        Register a component owner.
         
         This is only useful if the component is passed from one owner to
-        another, or if the component is created with the `owner` argument.
-        This method calls owner's `add_component`
-        :param owner:
-        :return:
+        another, or if the component is created with the `owner` argument (thus
+        attaching it immediately upon creation). This method calls owner's
+        ``add_component``
+
+        :param owner: an Entity to attach to.
         """
         if owner:
             if not isinstance(owner, Entity):
@@ -131,8 +177,10 @@ class Component(Listener):
         
     def on_event(self, event):
         """
-        Component's event callback.
-        :param event:
+        Component's event callback. Should be overridden if subclasses want to
+        accept events.
+
+        :param event: BearEvent instance
         :return:
         """
         pass
@@ -151,6 +199,9 @@ class Component(Listener):
 # Copypasting SO is the only correct way to program
 # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
 class Singleton(type):
+    """
+    A Singleton metaclass for EntityTracker
+    """
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -162,11 +213,18 @@ class Singleton(type):
 
 class EntityTracker(Listener, metaclass=Singleton):
     """
-    Listens to the ecs_add and ecs_destroy events and keeps track of all the
-    currently existing entities.
+    A singleton Listener that keeps track of all existing entities.
 
-    This tracker is used for entity lookup, eg by Components that need to find
-    all possible entities that fulfill certain criteria
+    Listens to the ``ecs_add`` and ``ecs_destroy events``, updating
+    ``self.entities`` accordingly.
+
+    Can be used to look up an entity by its ID:
+
+    ``entity_called_id = EntityTracker.entities['entity_id']``
+
+    Can also be used to get all entities that correspond to some criterion:
+
+    ``entity_iter = EntityTracker().filter_entities(lambda x: 'part_of_id' in x.id)``
     """
 
     def __init__(self):
@@ -184,8 +242,10 @@ class EntityTracker(Listener, metaclass=Singleton):
         Return all entities for which key evaluates to True.
 
         Note that this method returns entity objects themselves, not the IDs.
+
         :param key: A single-arg callable
-        :return:
+
+        :returns: iterator of Entities
         """
         if not hasattr(key, '__call__'):
             raise ValueError('EntityTracker requires callable for a key')
@@ -201,8 +261,10 @@ class WidgetComponent(Component):
     This component is an ECS wrapper around the Widget object. Since Widgets
     can accept events and it is sometimes reasonable to keep some event logic in
     the Widget instead of Components (ie to keep animation running), its
-    `on_event` method simply passes the events to the Widget. It also supports
-    `height`, `width` and `size` properties, also by calling widget's ones.
+    ``on_event`` method simply passes the events to the Widget. It also supports
+    ``height``, ``width`` and ``size`` properties, also by calling widget's ones.
+
+    :param widget: A Widget instance.
     """
     
     def __init__(self, dispatcher, widget, owner=None):
@@ -218,14 +280,23 @@ class WidgetComponent(Component):
 
     @property
     def height(self):
+        """
+        Height of the widget
+        """
         return self.widget.height
 
     @property
     def width(self):
+        """
+        Width of the widget
+        """
         return self.widget.width
 
     @property
     def size(self):
+        """
+        A (width, height) tuple
+        """
         return self.widget.size
     
     def __repr__(self):
@@ -236,10 +307,15 @@ class WidgetComponent(Component):
 
 class PositionComponent(Component):
     """
-    A component responsible for positioning Widget on ECSLayout.
+    A component responsible for positioning an Entity on ECSLayout.
     
-    It has x and y coordinates, as well as vx and vy speed components.
-    Coordinates are given in tiles and speed is in tiles per second.
+    :param x: A position of top left corner along X axis.
+
+    :param y: A position of top left corner along Y axis
+
+    :param vx: Horizontal speed (chars per second)
+
+    :param vy: Vertical speed (chars per second)
     """
     def __init__(self, dispatcher, x=0, y=0, vx=0, vy=0, owner=None):
         super().__init__(dispatcher, name='position', owner=owner)
@@ -289,12 +365,12 @@ class PositionComponent(Component):
     def move(self, x, y, emit_event=True):
         """
         Move the Entity to a specified position.
+
         :param x: x
+
         :param y: y
-        :param emit_event: Whether to emit an 'esc_move' event. There are a few
-        cases (ie setting the coordinates after the component is created, but
-        before the entity is added to the terminal) where this is undesirable.
-        :return:
+
+        :param emit_event: If True, emit an 'esc_move' event. There are a few cases (ie setting the coordinates after the component is created, but before the entity is added to the terminal) where this is undesirable.
         """
         self._x = x
         self._y = y
@@ -306,17 +382,22 @@ class PositionComponent(Component):
 
     def relative_move(self, dx, dy, emit_event=True):
         """
-        Move the Entity to a specified position.
-        :param x: x
-        :param y: y
-        :param emit_event: Whether to emit an 'esc_move' event. There are a few
-        cases (ie setting the coordinates after the component is created, but
-        before the entity is added to the terminal) where this is undesirable.
-        :return:
+        Move the Entity to a specified position relative to its current position.
+
+        :param dx: Movement along X axis, in chars
+
+        :param dy: Movement along Y axis, in chars
+
+        :param emit_event: gets passed to ``self.move()`` under the hood.
         """
         self.move(self.x+dx, self.y+dy, emit_event=emit_event)
         
     def on_event(self, event):
+        """
+        Process tick, if dx != 0 or dy != 0
+
+        :param event: A BearEvent instance
+        """
         if event.event_type == 'tick':
             # Move
             if self.vx or self.vy:
@@ -352,6 +433,10 @@ class DestructorComponent(Component):
     """
     A component responsible for cleanly destroying its entity and everything
     that has to do with it.
+
+    When used, all owner's components except this one are unsubscribed from all
+    events, but not deleted to let whatever interactions the owner was involved
+    in finish cleanly. The deletion happens on 'tick_over'
     """
     def __init__(self, *args, is_destroying=False, **kwargs):
         super().__init__(*args, name='destructor', **kwargs)
@@ -364,7 +449,6 @@ class DestructorComponent(Component):
         Unsubscribes owner and all its components from the queue and sends
         'ecs_remove'. Then all components are deleted. Entity itself is left at
         the mercy of garbage collector.
-        :return:
         """
         self.dispatcher.add_event(BearEvent('ecs_destroy', self.owner.id))
         self.is_destroying = True
@@ -396,7 +480,13 @@ class DestructorComponent(Component):
 
 class CollisionComponent(Component):
     """
-    A component responsible for processing collisions of this object
+    A component responsible for processing collisions of this object.
+
+    This is a base class, so its event processing just calls
+    ``self.collided_into`` when owner moves into something, and
+    ``self.collided_by`` when something else moves into the owner. Actual
+    collision processing logic should be provided by subclasses by overriding
+    these two methods.
     """
 
     def __init__(self, *args, **kwargs):
@@ -419,9 +509,12 @@ class CollisionComponent(Component):
 
 class WalkerCollisionComponent(CollisionComponent):
     """
-    A collision component that, upon colliding into something impassable,
-    moves the entity to where it came from. Expects both entities involved to
-    have a PassabilityComponent
+    A collision component that, upon colliding into something impassable (or
+    screen edges), moves the entity back to where it came from.
+
+    Expects both entities involved to have a PositionComponent and a
+    PassabilityComponent. Also expects owner's PositionComponent to have a
+    ``last_move`` attribute, which should be a tuple of (dx, dy).
     """
 
     def collided_into(self, entity):
@@ -450,17 +543,21 @@ class WalkerCollisionComponent(CollisionComponent):
 
 class PassingComponent(Component):
     """
-    A component responsible for knowing whether items can or cannot be walked
+    A component responsible for knowing whether or not items can be walked
     through.
 
     Unlike collisions of eg projectiles, walkers can easily collide with screen
     items and each other provided they are "behind" or "ahead" of each other. To
-    check for that, PassingComponent stores a sort of hitbox (basically the
+    check for that, PassingComponent stores a so-called shadow (basically the
     projection on the surface, something like lowest three rows for a
     human-sized object). Then, WalkerCollisionComponent uses those to define
-    if walk attempt was unsuccessful.
+    if walk attempt was legal.
 
     All entities that do not have this component are assumed to be passable.
+
+    :param shadow_pos: 2-tuple of ints, a position of a shadow relative to ``owner.position.pos``
+
+    :param shadow_size: 2-tuple of ints, (xsize, ysize) of the shadow
     """
 
     def __init__(self, *args, shadow_pos=(0, 0), shadow_size=None, **kwargs):
@@ -493,8 +590,13 @@ class DecayComponent(Component):
     """
     Attaches to an entity and destroys it when conditions are met.
 
-    Currently supported destroy conditions are 'keypress' and 'timeout'. If the
-    latter is set, you can supply the lifetime (defaults to 1.0 sec)
+    Expects the owner to have DestructorComponent.
+
+    :param destroy_condition: either 'keypress' or 'timeout'
+
+    :param lifetime: time between entity creation and its destruction. Does nothing if ``destroy_condition`` is set to 'keypress'. Defaults to 1 second.
+
+    :param age: the age of a given entity. Not meant to be set explicitly, except during deserialization.
     """
 
     def __init__(self, *args, destroy_condition='keypress', lifetime=1.0, age=0,
@@ -528,14 +630,19 @@ class DecayComponent(Component):
 
 def deserialize_component(serial, dispatcher):
     """
-    Provided a JSON string, creates a necessary object.
+    Provided a JSON string, creates a necessary component.
     
     Does not subscribe a component to anything (which can be done either by a
-    caller or in the ComponentSubclass.__init__) or assign it to any Entity
-    (which is probably done within `deserialize_entity`)
-    :param json_string:
-    :param dispatcher:
-    :return:
+    caller or in the ``ComponentSubclass.__init__``) or assign it to any Entity
+    (which is probably done within ``deserialize_entity``). The class of a
+    deserialized Component should be imported by the code that calls this
+    function, or someone within its call stack.
+
+    :param serial: A valid JSON string or a dict produced by deserializing such a string.
+
+    :param dispatcher: A queue passed to the ``Component.__init__``
+
+    :returns: a Component instance.
     """
     if isinstance(serial, str):
         d = loads(serial)
@@ -588,10 +695,17 @@ def deserialize_component(serial, dispatcher):
 
 
 def deserialize_entity(serial, dispatcher):
-    """Load the entity from JSON string or dict.
+    """
+    Load the entity from JSON string or dict.
     
-    Does not subscribe a new entity to anything or emit `bear_create` events;
-    this should be done by a caller."""
+    Does not subscribe a new entity to anything or emit ``bear_create`` events;
+    this should be done by a caller. All components within the entity are
+    deserialized by calls to ``deserialize_component``
+
+    :param serial: A valid JSON string or a dict produced by deserializing such a string.
+
+    :returns: an Entity instance
+    """
     if isinstance(serial, str):
         d = loads(serial)
     elif isinstance(serial, dict):
@@ -601,6 +715,3 @@ def deserialize_entity(serial, dispatcher):
     components = [deserialize_component(d['components'][x], dispatcher)
                   for x in d['components']]
     return Entity(id=d['id'], components=components)
-    
-    
-
