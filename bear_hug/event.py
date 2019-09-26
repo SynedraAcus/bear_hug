@@ -1,10 +1,51 @@
 """
 An event system.
-All events are passed around on every tick to listeners' `on_event` method according
-to their `event_type` subscriptions.
-`on_event` may return either a BearEvent or a list of BearEvents to be added to
-the queue. If a list is returned, the events are added (and will be processed)
-in the same order as they are in that list.
+
+Contains a base event class (``BearEvent``) and a queue.
+
+All events are added to the queue and passed around to listeners' ``on_event``
+methods according to their ``event_type`` subscriptions. This happens when
+``dispatcher.dispatch_events()`` is called, normally every tick.
+`on_event` callback may return either nothing, a BearEvent, or a list of
+BearEvents. If any events are returned, they are added to the queue (preserving
+the order, if there were multiple events within a single return list).
+
+In order to be processed, an event needs to have a correct ``event_type``.
+Builtin types are the following:
+
+'tick', emitted every tick. ``event_value`` stores time since the previous such
+event.
+
+'service', emitted for various events related to the queue or loop functioning.
+Example event_types are 'tick_over' and 'shutdown', emitted during the end of
+tick and for shutting down the queue.
+
+'key_down', emitted whenever a key or mouse button is pressed. ``event_value``
+stores TK code for the button.
+
+'key_up', emitted whenever a key or mouse button is released. ``event_value``
+stores TK code for the button.
+
+'misc_input', emitted whenever there is some non-keyboard input, for example
+mouse movement or game window closed via OS UI. ``event_value`` stores TK code
+for the input event.
+
+'text_input', emitted when InputField widget wants to return something.
+``event_value`` stores the user-entered string.
+
+'play_sound', emitted when someone has requested a sound to be played.
+``event_value`` stores the sound ID.
+
+ECS events:
+
+'ecs_create', 'ecs_add', 'ecs_move','ecs_collision', 'ecs_destroy',
+'ecs_remove', 'ecs_scroll_by', 'ecs_scroll_to', 'ecs_update'.  These are
+described in detail within bear_hug.ecs_widgets docs.
+
+Any user-defined ``event_type``s need to be registered before use via
+``dispatcher.register_event_type()``. Unknown event types can not be added to
+the queue. Event values, on the other hand, are not validated except by whoever
+has subscribed to them.
 """
 
 from bear_hug.bear_utilities import BearLoopException
@@ -13,7 +54,7 @@ from collections import deque
 
 class BearEvent:
     """
-    Event data class. Has two params: event_type and event_value
+    Event data class. Has two params: event_type and event_value.
     """
     __slots__ = ('event_type', 'event_value')
     
@@ -25,10 +66,10 @@ class BearEvent:
 class BearEventDispatcher:
     """
     The BearEvent queue and dispatcher class.
-    Iterates until someone emits the 'shutdown' event of type 'service'. Widgets
-    may expect the 'shutdown_ready' event of the same type to be emitted a tick
-    before that, so that they could finish processing the last tick and save
-    their data or whatever. But this is not enforced by the queue.
+
+    Stores the events sent to it, then emits them to subscribers in
+    chronological order. To start getting events, a Listener needs to subscribe
+    via ``dispatcher.register_listener()``.
     """
     def __init__(self):
         self.last_tick_time = None
@@ -57,24 +98,28 @@ class BearEventDispatcher:
     def register_listener(self, listener, event_types='all'):
         """
         Add a listener to this event_dispatcher.
-        :param object listener: a listener to add. Any object with an `on_event`
-        callback can be added. The callback should accept a BearEvent instance
-        as a single parametickter.
-        :param iterable|str event_types: either a string or an iterable of
-        strings. If an iterable, its elements are event types the listener
-        subscribes to.
-        
+
+        Any object with an ``on_event`` method can be added as a listener. This
+        method should accept BearEvent as a single argument and return either
+        nothing, or a single BearEvent, or a list of BearEvents.
+
+        To choose event types to subscribe to, ``event_types`` kwarg can be
+        set to a string or an iterable of strings. If an iterable, its elements
+        should be event types the listener subscribes to.
+
         If a string, the following rules apply:
-        * If a string equals 'all', the listener is subscribed to all currently
+        1. If a string equals 'all', the listener is subscribed to all currently
         registered event types.
-        * Elif a string starts with '*', the listener is subscribed to all
+        2. Elif a string starts with '*', the listener is subscribed to all
         currently registered event types for whose name event_types[1:] is a
         substring.
-        * Else a string is interpreted as a single event type.
-        
-        In all cases incorrect event types raise BearLoopException.
-        Defaults to 'all'
-        :return:
+        3. Else a string is interpreted as a single event type.
+
+        Whether in list or string, incorrect event types raise
+        BearLoopException. All non-string event types are treated as incorrect.
+
+        :param listener: a listener to add.
+        :param event_types: event types to which it wants to subscribe
         """
         if not hasattr(listener, 'on_event'):
             raise BearLoopException('Cannot add an object without on_event' +
@@ -106,17 +151,21 @@ class BearEventDispatcher:
     
     def unregister_listener(self, listener, event_types='all'):
         """
-        Remove a listener from the event_dispatcher or some of its event types.
-        :param object listener: listener to remove
-        :param iterable|str event_types: event types to unsubscribe from or
-        'all'. Defaults to 'all'
+        Unsubscribe a listener from all or some of its event types.
+
+        :param listener: listener to unsubscribe
+
+        :param event_types: a list of event types to unsubscribe from or 'all'. Defaults to 'all'
         :return:
         """
         if event_types == 'all':
             event_types = self.listeners.keys()
         for event_type in event_types:
             if listener in self.listeners[event_type]:
-                self.listeners[event_type].remove(listener)
+                try:
+                    self.listeners[event_type].remove(listener)
+                except KeyError:
+                    raise BearLoopException(f'Attempting to unsubscribe from nonexistent event type {event_type}')
                 
     def register_event_type(self, event_type):
         """
@@ -125,8 +174,8 @@ class BearEventDispatcher:
         This makes passing (and subscribing to) a new event type possible. No
         listeners are automatically subscribed to it, even those that were
         initially registered with 'all' or fitting '*'-types.
-        :param event_type:
-        :return:
+
+        :param event_type: A string to be used as an event type.
         """
         if not isinstance(event_type, str):
             raise ValueError('Event type must be a string')
@@ -136,6 +185,7 @@ class BearEventDispatcher:
     def add_event(self, event):
         """
         Add a BearEvent to the queue.
+
         :param event:
         :return:
         """
@@ -148,7 +198,7 @@ class BearEventDispatcher:
     
     def start_queue(self):
         """
-        Sends the queue initialization event to deque
+        Send the queue initialization event.
         :return:
         """
         self.deque.append(BearEvent(event_type='service',
@@ -156,9 +206,9 @@ class BearEventDispatcher:
     
     def dispatch_events(self):
         """
-        Dispatch all the events to their listeners, adding whatever they have to
-        say about it to the queue.
-        :return:
+        Dispatch all the events to their listeners.
+         
+        Whatever they return is added to the queue.
         """""
         while len(self.deque) > 0:
             e = self.deque.popleft()

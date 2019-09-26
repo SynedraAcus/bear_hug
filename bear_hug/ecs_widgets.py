@@ -1,5 +1,5 @@
 """
-A collection of Widgets and Listeners designed specifically for the ECS system.
+Two Layouts designed specifically for the ECS system.
 """
 
 from bear_hug.bear_utilities import BearECSException, BearLayoutException, \
@@ -13,53 +13,81 @@ class ECSLayout(Layout):
     """
     A Layout of entities.
     
-    It is controlled entirely by events. Although Layour methods like
-    `add_child` and `move_child` are not overloaded, their use is discouraged.
+    This layout, besides visualization, provides collision detection. It is
+    controlled entirely by events. Although Layout methods  ``add_child`` and
+    ``move_child`` are not overloaded, their use is discouraged. Just like
+    a regular Layout, ECSLayout resides within a single bearlibterminal layer
+    and therefore does not provide character overlap for overlapping entities.
+    Who hides whom is currently determined by the order of widget addition, with
+    newer entities on top of older ones (Z-levels are to be implemented in a
+    future release).
     
-    In all events, entity IDs, not the actual Entity objects, are passed. Event
-    conventions are as following:
-    
-    `BearEvent(event_type='ecs_move', event_value=(entity, x, y))`.
-    Announces that the widget of the entity in question should be moved
-    to (x; y). Behaviour for widgets trying to leave map edges is left to
-    be determined by ECSLayout or its children.
-    
-    `BearEvent(event_type='ecs_remove', event_value=entity)`.
-    Announces that the widget of the entity in question should be removed from
-    the ECSLayout. Does not cause or imply the destruction of entity object.
+    Event conventions are as following:
+
+    ``BearEvent(event_type='ecs_create', event_value=entity_object)``
+
+    Announces that a new Entity has been created and needs to be registered for
+    ECSLayout. Does not cause it to be placed on screen. The same event tells
+    the EntityTracker about any newly-created Entities. It should not be emitted
+    until the Entity has at least ID and a WidgetComponent.
     
     `BearEvent(event_type='ecs_add', event_value=(entity, x, y))`.
+
     Announces that the widget of the entity in question should be added to the
-    ECSLayout at (x;y). The emission of this event implies the existence of the
-    entity and its widget.
-    
-    This widget also provides the collision detection for all widgets within it.
-    If a widget attempts to move into the position occupied by some other
-    widget, the movement is not blocked, but the 'ecs_collision' event(s) get
-    emitted. The event follows the following convention:
-    
-    `BearEvent(event_type='ecs_collision', event_value=(widget_moved.id,
-                                                    widget_collided_into.id))`
-    If the widget enters the screen border (ie will go outside it the next time
-    it moves, assuming it keeps the direction), the event takes the following
-    form:
-    `BearEvent(event_type='ecs_collision', event_value=(widget_moved.id,
-                                                        None))`
+    ECSLayout at (x;y). This event should not be emitted before both entity and
+    its widget have been created, and 'ecs_create' event has been emitted.
+
+    ``BearEvent(event_type='ecs_move', event_value=(entity, x, y))``
+
+    Announces that the widget of the entity in question should be moved
+    to (x; y). If the widget collides into the widget of another Entity (or
+    multiple widgets), emits ``BearEvent('ecs_collide', other_entity_id)`` for
+    each Entity that was collided into. If the widget touches Layout edges,
+    emits ``BearEvent('ecs_collide', None)`` instead. In either case, collision
+    does not automatically prevent movement.
+
+    ``BearEvent(event_type='ecs_remove', event_value=entity)``
+
+    Announces that the widget of the entity in question should be removed from
+    the ECSLayout, but does not cause or imply the its destruction. It is to be
+    used when the Entity currently on screen needs to be hidden, but it is
+    expected to be shown again later.
+
+    ``BearEvent(event_type='ecs_destroy', event_value=entity)``
+
+    Announces that the widget of the entity in question should be removed from
+    the ECSLayout, as well as from its entities and widget lists. This event is
+    emitted when the entity is destroyed (eg by DestructorComponent) and used by
+    EntityTracker to know which Entities no longer exist.
+
+    ``BearEvent(event_type='ecs_redraw')``
+
+    Announces that the layout needs to be redrawn this tick, even if none of the
+    events above have been emitted. This is useful if some widget (eg animation)
+    has changed its chars or colors, but was not moved, added or deleted.
+
+    If at least one of these events was sent to the ECSLayout, it will redraw
+    itself on 'tick_over'.
+
+    :param chars: Layout BG chars
+
+    :param colors: Layout BG colors
     """
-    
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
+        # TODO: Z-levels in ECSLayout and ScrollableECSLayout
         self.entities = {}
         self.widgets = {}
         self.need_redraw = False
     
     def add_entity(self, entity):
         """
-        Register the entity to be displayed. Assumes that the entity has a
-        widget already.
-        
-        The entity is not actually shown until the `'ecs_add'` event is emitted
-        :return:
+        Register the entity to be displayed.
+
+        Assumes that the entity has a widget already. The widget is not actually
+        shown until the `'ecs_add'` event with its entity ID is emitted.
+
+        :param entity: Entity instance
         """
         if not isinstance(entity, Entity):
             raise BearECSException('Cannot add non-Entity to ECSLayout')
@@ -69,11 +97,12 @@ class ECSLayout(Layout):
     def remove_entity(self, entity_id):
         """
         Forget about the registered entity and its widget.
-        Does not imply or cause the destruction of Entity object or any of its
-        Component objects (except if this was the last reference). Making sure
-        that the entity is removed cleanly is someone else's job.
-        :param entity_id:
-        :return:
+
+        Does not imply or cause the destruction of Entity object itself or any
+        of its Component objects. Making sure that the entity is removed cleanly
+        is not the Layout's job.
+
+        :param entity_id: Entity ID
         """
         if entity_id not in self.entities:
             raise BearECSException('Attempting to remove nonexistent entity {} from ESCLayout'.
@@ -82,13 +111,17 @@ class ECSLayout(Layout):
         del self.entities[entity_id]
         
     def on_event(self, event):
-        # React to the events
+        """
+        See class documentation
+
+        :param event: BearEvent instance
+        """
         r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
             # Checking if collision events need to be emitted
             # Check for collisions with border
-            if x < 0 or x+self.entities[entity_id].widget.size[0]\
+            if x < 0 or x + self.entities[entity_id].widget.size[0]\
                  > len(self.chars[0]) or y < 0 or \
                  y + self.entities[entity_id].widget.size[1] > len(self.chars):
                 r.append(BearEvent(event_type='ecs_collision',
@@ -100,7 +133,7 @@ class ECSLayout(Layout):
                 collided = set()
                 for y_offset in range(self.entities[entity_id].widget.size[1]):
                     for x_offset in range(self.entities[entity_id].widget.size[0]):
-                        for other_widget in self._child_pointers[y+y_offset]\
+                        for other_widget in self._child_pointers[y+y_offset] \
                             [x+x_offset]:
                             # Child_pointers is ECS-agnostic and stores pointers
                             # to the actual widgets
@@ -147,23 +180,33 @@ class ECSLayout(Layout):
 
 class ScrollableECSLayout(Layout):
     """
-    A Layout that can show only a part of its surface and supports ECS system.
+    A ECSLayout that can show only a part of its surface.
 
-    Like a ScrollableLayout, accepts `chars` and `colors` on creation, which
+    Like a ScrollableLayout, accepts ``chars`` and ``colors`` on creation, which
     should be the size of the entire layout, not just the visible area.
-    The latter is initialized by `view_pos` and `view_size` arguments.
+    The latter is initialized by ``view_pos`` and ``view_size`` arguments.
     
-    Like an ECSLayout, supports all 'ecs_*' events. Unlike it, this class also
-    supports two event types:
+    This class supports all 'ecs_*' events described in the docs for ECSLayout.
+    In addition, it supports the following two two event types:
     
-    `BearEvent(event_type='ecs_scroll_by', event_value=(x, y)). Shifts visible
-    area by x chars horizontally and by y chars vertically.
+    ``BearEvent(event_type='ecs_scroll_by', event_value=(x, y))``
+
+    Shifts visible area by x chars horizontally and by y chars vertically.
     
-    `BearEvent(event_type='ecs_scroll_to', event_value=(x, y). Moves visible
-    area to (x, y).
-    
-    If incorrect value is provided to either of these events, it is silently
-    ignored.
+    ``BearEvent(event_type='ecs_scroll_to', event_value=(x, y)``
+
+    Moves visible area to (x, y).
+
+    Both events cause BearLayoutException if event values require visible area
+    to move beyond Layout borders.
+
+    :param chars: Layout BG chars.
+
+    :param colors: Layout BG colors.
+
+    :param view_pos: Top left corner of the initial visible area, 2-tuple (x, y).
+
+    :param view_size: The size of the visible area, 2-tuple (x, y).
     """
 
     # This class is basically a copypaste of pieces from
@@ -221,17 +264,22 @@ class ScrollableECSLayout(Layout):
         self.colors = colors
     
     def resize_view(self, new_size):
+        """
+        Currently not implemented.
+        :param new_size:
+        :return:
+        """
         # TODO: support resizing view.
         # This will require updating the pointers in terminal or parent layout
-        pass
+        raise NotImplementedError
     
     def scroll_to(self, pos):
         """
         Move field of view to `pos`.
 
         Raises `BearLayoutException` on incorrect position
-        :param pos: tuple of ints
-        :return:
+
+        :param pos: 2-tuple (x, y)
         """
         if not (len(pos) == 2 and all((isinstance(x, int) for x in pos))):
             raise BearLayoutException('Field of view position should be 2 ints')
@@ -245,9 +293,9 @@ class ScrollableECSLayout(Layout):
         """
         Move field of view by `shift[0]` to the right and by `shift[1]` down.
 
-        Raises `BearLayoutException` on incorrect position
-        :param shift: tuple of ints
-        :return:
+        Raises `BearLayoutException` on incorrect position.
+
+        :param shift: 2-tuple (dx, dy)
         """
         pos = (self.view_pos[0] + shift[0], self.view_pos[1] + shift[1])
         self.scroll_to(pos)
@@ -271,8 +319,9 @@ class ScrollableECSLayout(Layout):
         Does not imply or cause the destruction of Entity object or any of its
         Component objects (except if this was the last reference). Making sure
         that the entity is removed cleanly is someone else's job.
-        :param entity_id:
-        :return:
+
+        :param entity_id: ID of the removed entity.
+
         """
         if entity_id not in self.entities:
             raise BearECSException(
@@ -282,6 +331,11 @@ class ScrollableECSLayout(Layout):
         del self.entities[entity_id]
 
     def on_event(self, event):
+        """
+        See class documentation.
+
+        :param event: BearEvent instance.
+        """
         # React to the events
         r = []
         if event.event_type == 'ecs_move':

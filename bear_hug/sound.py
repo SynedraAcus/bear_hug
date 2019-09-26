@@ -2,9 +2,9 @@
 A sound system.
 
 Currently it exports a single class called `SoundListener`. It's a Listener
-wrapper around simpleaudio and wave libraries. While later the backend is likely
-to change (at least to support sound formats other than `.wav`), event API is
-probably gonna remain backward-compatible.
+wrapper around ``simpleaudio`` and ``wave`` libraries. While later the backend
+is likely to change (at least to support sound formats other than `.wav`), event
+API is probably gonna remain backwards-compatible.
 """
 
 from bear_hug.bear_utilities import BearSoundException
@@ -23,10 +23,10 @@ class SoundListener(Listener):
     """
     It doesn't listen to sounds. It listens to the *events* and plays sounds.
     
-    This class is expected to be used as a singleton, *ie* there is no reason to
-    have two SoundListeners active at the same time and therefore no API for it.
+    This class is expected to be used as a singleton, ie there is no reason to
+    have two SoundListeners active at the same time, and therefore no API for it.
     
-    Accepts events like this:
+    Accepts a single kind of event:
     
     `BearEvent(event_type='play_sound', event_value=sound_name)`
     
@@ -35,6 +35,8 @@ class SoundListener(Listener):
     single arg during creation, or added later via register_sound. In either
     case, for a sound either a `simpleaudio.WaveObject` or a string is expected.
     In the latter case, a string is treated as a path to a `.wav` file.
+
+    :param sounds: a dict of ``{'sound_id': simlpleaudio.WaveObject}``
     """
     def __init__(self, sounds):
         if not isinstance(sounds, dict):
@@ -56,9 +58,10 @@ class SoundListener(Listener):
     def register_sound(self, sound, sound_name):
         """
         Register a new sound for this listener
-        :param sound: WaveObject or str. A sound to be registered
+
+        :param sound: WaveObject or str. A sound to be registered. If str, this is treated as a path to a .wav file.
+
         :param sound_name: name of this sound.
-        :return:
         """
         if sound_name in self.sounds:
             raise BearSoundException(f'Duplicate sound name "{sound_name}"')
@@ -77,8 +80,8 @@ class SoundListener(Listener):
         
         In case you need to play the sound without requesting it through the
         event.
+
         :param sound_name: A sound to play.
-        :return:
         """
         if sound_name not in self.sounds:
             raise BearSoundException(

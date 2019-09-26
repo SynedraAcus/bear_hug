@@ -1,5 +1,5 @@
 """
-Loaders for the various ASCII-art formats
+Loaders for the various ASCII-art formats.
 """
 
 from bear_hug.bear_utilities import BearException, copy_shape, rotate_list
@@ -12,9 +12,11 @@ import os
 
 class ASCIILoader:
     """
+
     A base class for all the resource loaders. It knows how to return its chars
     and colors (or a fragment thereof), but expects the children to do their
     loading by themselves.
+
     """
     def __init__(self):
         self.chars = None
@@ -23,7 +25,7 @@ class ASCIILoader:
     def get_image(self):
         """
         Return the entire chars and colors of this loader
-        :return:x
+        :returns: chars, colors (two 2-nested lists of equal size)
         """
         if not self.chars or not self.colors:
             raise BearException('Loader is empty')
@@ -31,9 +33,17 @@ class ASCIILoader:
     
     def get_image_region(self, x, y, xsize, ysize):
         """
-        Return some region of this loader's chars and colors
-        As everywhere, the coordinates start from 0.
-        :return:
+        Return some rectangular region of this loader's chars and colors.
+
+        :param x: X coordinate of the leftmost column of required region.
+
+        :param y: Y coordinate of the topmost row of required region.
+
+        :param xsize: width of the required region.
+
+        :param ysize: height of the required region.
+
+        :returns: chars, colors (two 2-nested lists of equal size).
         """
         if not self.chars or not self.colors:
             raise BearException('Loader is empty')
@@ -61,13 +71,16 @@ class ASCIILoader:
 class TxtLoader(ASCIILoader):
     """
     A loader that reads a plaintext file.
-    On the creation, the loader accepts a filename (anything acceptable by
-    `open()`), default color and a bool `load_file`.
-    The first argument controls what color would the characters be assigned. As
-    `.txt` format does not store colors, all chars will be the same color. The
-    latter controls whether the file is read immediately. If False (default), on
-    loader creation it only checks that the file exists; if True, its contents
-    are immediately loaded to `loader.chars`.
+
+    Accepts a filename (anything acceptable by `open()`) as a single position
+    argument.
+
+    Since plaintext files can not store colour, all chars are set to the same
+    colour.
+
+    :param default_color: the color of chars.
+
+    :param load_file: if True, the file is parsed immediately. Otherwise, only its existence is checked on loader creation, but the file is not parsed until something is required from this loader.
     """
     def __init__(self, filename, default_color='white', load_file=False):
         super().__init__()
@@ -90,11 +103,28 @@ class TxtLoader(ASCIILoader):
         self.colors = copy_shape(self.chars, self.default_color)
         
     def get_image(self):
+        """
+        Return the entire chars and colors of this loader
+        :returns: chars, colors (two 2-nested lists of equal size)
+        """
         if not self.chars or not self.colors:
             self._load_file()
         return super().get_image()
         
     def get_image_region(self, x, y, xsize, ysize):
+        """
+        Return some rectangular region of this loader's chars and colors.
+
+        :param x: X coordinate of the leftmost column of required region.
+
+        :param y: Y coordinate of the topmost row of required region.
+
+        :param xsize: width of the required region.
+
+        :param ysize: height of the required region.
+
+        :returns: chars, colors (two 2-nested lists of equal size).
+        """
         if not self.chars or not self.colors:
             self._load_file()
         return super().get_image_region(x, y, xsize, ysize)
@@ -102,19 +132,20 @@ class TxtLoader(ASCIILoader):
 
 class XpLoader(ASCIILoader):
     """
-    A loader that reads REXPaint *.xp files.
-    As with the other loaders, the file is not parsed until one of the `get_*`
-    methods gets called. Its existence, though, is checked on Loader creation.
-    
-    Most of the code is taken from MIT-licensed XPLoaderPy3, copyright
-    Sean Hagar, Erwan Castioni and Gawein Le Goff.
-    
-    As the bear_hug widget API does not allow multi-layered widgets, `get_image`
-    and `get_image_region` return the image with the only the character and
-    color from the highest layer which is non-empty for a given cell. For
-    getting data from layers separately, use `get_layer` and `get_layer_region`.
-    
+    A loader that reads REXPaint '*.xp' files.
+    The file is never parsed until one of the ``get_*`` methods gets called. Its
+    existence, though, is checked on Loader creation.
+
+    As the bear_hug widget API does not allow multi-layered widgets,
+    ``get_image`` and ``get_image_region`` return the image with the only the
+    character and color from the highest non-empty layer. For
+    getting data from layers separately, use ``get_layer`` and
+    ``get_layer_region``.
+
     Background colors are ignored altogether.
+
+    Most of the XP parsing in this class code is taken from MIT-licensed
+    XPLoaderPy3, copyright Sean Hagar, Erwan Castioni and Gawein Le Goff.
     """
 
     version_bytes = 4
@@ -159,7 +190,8 @@ class XpLoader(ASCIILoader):
         Return chars and colors for the entire image. For each cell only the
         values from the topmost layer are used. Background colors are
         ignored altogether.
-        :return:
+
+        :returns: chars, colors (2 2-nested lists)
         """
         if not self.chars:
             self._process_xp_file()
@@ -168,14 +200,20 @@ class XpLoader(ASCIILoader):
 
     def get_image_region(self, x, y, xsize, ysize):
         """
-        Return chars and colors for the image region. For each cell only the
-        values from the topmost layer are used. Background colors are
-        ignored altogether.
-        :param x:
-        :param y:
-        :param xsize:
-        :param ysize:
-        :return:
+        Return chars and colors for the image region.
+
+        For each cell only the values from the topmost layer are used.
+        Background colors are ignored altogether.
+
+        :param x: leftmost column of the required region.
+
+        :param y: topmost row of the required region.
+
+        :param xsize: width of the required region
+
+        :param ysize: height of the required region
+
+        :returns: chars, colors (2 2-nested lists)
         """
         if not self.chars:
             self._process_xp_file()
@@ -184,13 +222,15 @@ class XpLoader(ASCIILoader):
     
     def get_layer(self, layer):
         """
-        Get chars and (foreground) colors for the entire image layer. This
-        method does not check layer size and returns whatever available.
-        
+        Get chars and (foreground) colors for the entire image layer.
+
+        This method does not check layer size and returns whatever is available.
         By default, the REXPaint creates layers the size of the entire image, so
         this shouldn't be much of an issue.
-        :param layer:
-        :return:
+
+        :param layer: layer number
+
+        :returns: chars, colors (2 2-nested lists)
         """
         if not self.layers:
             self._process_xp_file()
@@ -199,6 +239,21 @@ class XpLoader(ASCIILoader):
         return deepcopy(self.layers[layer][0]), deepcopy(self.layers[layer][1])
     
     def get_layer_region(self, layer, x, y, xsize, ysize):
+        """
+        Return a rectangular region from a certain layer.
+
+        :param layer: layer number
+
+        :param x: leftmost column of the required region.
+
+        :param y: topmost row of the required region.
+
+        :param xsize: width of the required region
+
+        :param ysize: height of the required region
+
+        :returns: chars, colors (2 2-nested lists)
+        """
         if not self.layers:
             self._process_xp_file()
         if layer >= self.layer_count:
@@ -220,14 +275,14 @@ class XpLoader(ASCIILoader):
         gz_handle = gzip.open(self.filename)
         line = gz_handle.read()
         self._load_xp_string(line)
-        
+
     def _get_topmost_layer(self):
         if self.layer_count == 1:
             self.chars = deepcopy(self.layers[0][0])
             self.colors = deepcopy(self.layers[0][1])
         else:
-            self.chars = [ [' ' for x in range(self.width)]
-                           for y in range(self.height)]
+            self.chars = [[' ' for x in range(self.width)]
+                          for y in range(self.height)]
             self.colors = copy_shape(self.chars, None)
             for row in range(self.height):
                 for column in range(self.width):
@@ -236,7 +291,7 @@ class XpLoader(ASCIILoader):
                             self.chars[row][column] = layer[0][row][column]
                             self.colors[row][column] = layer[1][row][column]
                             break
-        
+
     # All code from here to the end of the class is adapted from XPLoaderPy3
     # Looks like a mess of crutches on top of other crutches, but I'm not really
     # up to building an elegant solution right now.
@@ -379,7 +434,16 @@ class Atlas:
     An image atlas.
     
     An instance of this class accepts a Loader instance and a path to the JSON
-    file. The latter is parsed immediately.
+    file. The latter is parsed immediately and should contain a list of objects,
+    each of which has five keys: "name", "x", "y", "xsize" and "ysize". Other
+    keys, if any, are ignored. The purpose of this is, basically, to be able to
+    address image regions by a human-readable name, so coordinates and sizes
+    should describe valid regions in the loader. A single region may be
+    addressed by multiple names, but not the other way around.
+
+    :param loader: a Loader instance.
+
+    :param json_file: a string describing the path to a JSON file.
     """
     def __init__(self, loader, json_file):
         self.loader = loader
@@ -391,8 +455,11 @@ class Atlas:
         
     def get_element(self, name):
         """
-        Return an element with a given name
-        :param name:
-        :return:
+        Return an element with a given name.
+
+        If nothing with this name was described in JSON file, raises KeyError
+
+        :param name: A sub-image ID.
+        :returns: A region (chars, colors)
         """
         return self.loader.get_image_region(*self.elements[name])

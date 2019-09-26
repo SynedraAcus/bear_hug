@@ -8,7 +8,7 @@ entities are recommended.
 # TODO: rebuild JSON serialization system to avoid dumping Widgets altogether
 # This is essentially mixing up model and view, which is generally bad. However,
 # it has marginal benefits (for dumping procedurally generated and/or edited
-# widgets within entities. Although actually it exists mostly because I want a
+# widgets within entities). Although actually it exists mostly because I want a
 # functional dumping system right now, and disentangling them would make
 # WidgetComponent serializer a huge mess.
 
@@ -27,10 +27,15 @@ from time import time
 def deserialize_widget(serial, atlas=None):
     """
     Provided a JSON string, return a widget it encodes.
-    :param json_string:
-    :param dispatcher:
-    :return:
+
+    Specifics of JSON format are described in the Widget class documentation.
+    It is important to know, though, that the Widget subclass that a given JSON
+    encodes should be imported to the code that attempts to call this function.
+
+    :param serial: a JSON string or dict
+    :returns: a Widget instance
     """
+
     # TODO: support getting chars and colors for deserialization from atlas
     # In animation, it is achieved by storing source IDs in __init__. Not
     # certain if it'd be safe for Widgets with all their complexity
@@ -92,9 +97,12 @@ def deserialize_widget(serial, atlas=None):
 
 def deserialize_animation(serial, atlas=None):
     """
-    Deserialize an animation from JSON dump
-    :param serial:
-    :return:
+
+    Deserialize an animation from a JSON dump
+
+    :param serial: A JSON string or a dict.
+
+    :returns: an Animation instance.
     """
     d = loads(serial)
     if d['storage_type'] == 'atlas':
@@ -114,36 +122,36 @@ def deserialize_animation(serial, atlas=None):
 class Widget:
     """
     The base class for things that can be placed on the terminal.
+
     This class is inactive and is intended to be either inherited from or used
-    for purely decorative non-animated objects. Event processing and animations
-    are covered by its subclasses; while it has `on_event()` method, it does
+    for non-interactive non-animated objects. Event processing and animations
+    are covered by its subclasses; while it has ``on_event()`` method, it does
     nothing. This allows Widgets to work without subscribing to the queue and
-    saves some tacts on not redrawing them unless the Widget itself considers it
+    saves some work on not redrawing them unless the Widget itself considers it
     necessary.
 
-    Accepted parameters:
-    `chars`: a list of unicode characters
-    `colors`: a list of colors. Anything that is accepted by terminal.color()
-    goes here (a color name or a 0xAARRGGBB/0xRRGGBB/0xRGB/0xARGB integer).
-
-    `chars` and `colors` should be exactly the same shape, otherwise the
-    BearException is raised.
+    Under the hood, this class does little more than store two 2-nested lists of
+    ``chars`` and ``colors`` (for characters that comprise the image and their
+    colors). These two should be exactly the same shape, otherwise a
+    ``BearException`` is raised.
     
     Widgets can be serialized into JSON similarly to Components and Entities.
     `repr(widget)` is used for serialization and should generate a valid
-    JSON-encoded dict. It should always include a 'class' key which
+    JSON-encoded dict. It should always include a ``class`` key which
     should equal the class name for that component and will be used by a
-    deserializer to determine what to create. `chars` and `colors` keys are also
-    necessary. They should encode widget's chars and colors as arrays of strings
-    and each of these strings should be a list of values for
+    deserializer to determine what to create. ``chars`` and ``colors` keys are
+    also necessary. They should encode widget's chars and colors as arrays of
+    strings and each of these strings should be a list of values for
     chars' and colors' inner lists (str-converted chars and str-converted
     `#ffffff`-type colors; comma-separated for colors).
     
     All other keys will be deserialized and treated as kwargs to a newly-created
     object. To define the deserialization protocol, JSON dict may also contain
-    keys formatted as '{kwarg_name}_type' which should be a string and will be
-    eval-ed as during deserialization. Only Python's builtin converters (eg
-    `str`, `int` or `float`) are safe; custom ones are currently unsupported.
+    keys formatted as ``{kwarg_name}_type``'`` which should be a string and will
+    be eval-ed during deserialization. Only Python's builtin converters (eg
+    ``str``, ``int`` or ``float``) are safe; custom ones are currently
+    unsupported.
+
     For example, the following is a valid JSON:
 
     ```
@@ -165,8 +173,12 @@ class Widget:
                   former_owners=set(['asd, 'zxc', 'qwe']))
     ```
 
-    The following keys are forbidden: `parent` and `terminal`. Kwarg validity
-    is not controlled except by `Component.__init__()`.
+    The following keys are forbidden: ``parent`` and ``terminal``. Kwarg
+    validity is not controlled except by ``WidgetSubclass.__init__()``.
+
+    :param chars: a 2-nested list of unicode characters
+
+    :param colors: a 2-nested list of colors. Anything that is accepted by ``terminal.color()`` goes here (a color name or a 0xAARRGGBB/0xRRGGBB/0xRGB/0xARGB integer are fine, (r, g, b) tuples are unreliable).
     """
     #TODO: maybe support background colour after all?
     
@@ -226,20 +238,19 @@ class Widget:
         """
         Flip a widget along one of the axes.
         
-        Rotates chars and colors either horizontally ('x' or 'horizontal') or
-        vertically ('y' or 'vertical'). Note that this method has **extremely**
-        limited uses: first, it only affects chars and colors *as they are now*.
-        If later the widget gets updated via animation, updating label text,
-        Layout's children being redrawn, etc., it will be un-flipped again.
-        Second, most ASCII-art does not take it well. You're probably safe with
-        something almost symmetrical, like background garbage and such, but for
-        complex images it's better to provide both left and right versions.
+        Note that this method has **extremely** limited uses: first, it only
+        affects chars and colors *as they are now*. If later the widget gets
+        updated via animation, updating label text, Layout's children being
+        redrawn, etc., it will be un-flipped again.
+
+        Second, most ASCII-art does not take it well. Unlike raster and vector
+        graphics, there is no general way to flip an ASCII image
+        programmatically (except, of course, flipping chars themselves which I
+        find aesthetically unacceptable for my projects). It may work for random
+        noisy tiles, like littered floors, grass and such, but for complex
+        images it's better to provide both left and right versions.
         
-        Unlike raster and vector graphics, there is no general way to flip an
-        ASCII image programmatically. Except, of course, flipping tiles
-        themselves which I find aesthetically unacceptable for my projects.
-        
-        :param axis:
+        :param axis: An axis along which to flip. Either one of {'x', 'horizontal'} or one of {'y', 'vertical'}
         :return:
         """
         if axis in ('x', 'horizontal'):
@@ -262,8 +273,13 @@ class Widget:
 class SwitchingWidget(Widget):
     """
     A widget that can contain a collection of chars/colors pairs and switch
-    them on command. These char/color pairs should all be the same shape.
-    Does not do any transition animations.
+    them on command.
+
+    These char/color pairs should all be the same shape. Does not do any
+    transition animations.
+
+    :param images_dict: a dict of {image_id: (chars, colors)}
+    :param initial_image: an ID of the first image to show. Should be a key in ``images_dict``.
     """
     
     def __init__(self, chars=None, colors=None, images_dict=None, initial_image=None):
@@ -296,6 +312,14 @@ class SwitchingWidget(Widget):
         self.current_image = initial_image
     
     def switch_to_image(self, image_id):
+        """
+        Switch to a given image ID
+
+        The ID should be a key in the original ``image_dict``. Otherwise,
+        BearException is raised.
+
+        :param image_id: image ID, str.
+        """
         if image_id != self.current_image:
             try:
                 self.chars = self.images[image_id][0]
@@ -323,18 +347,26 @@ class SwitchingWidget(Widget):
 class Layout(Widget):
     """
     A widget that can add others as its children.
-    All children get drawn to its `chars` and are thus displayed on a single
-    bearlibterminal layer. The layout does not explicitly pass events to its
-    children, they are expected to subscribe to event queue by themselves.
-    Children are allowed to overlap, but in that case the most recent one's char
-    is actually drawn.
+
+    All children get drawn to its chars and colors, and are thus displayed
+    within a single bearlibterminal layer. Therefore, if children overlap each
+    other, the lower one is hidden completely. In the resolution of who covers
+    whom, a newer child always wins. The layout does not explicitly pass events
+    to its children, they are expected to subscribe to event queue by
+    themselves.
+
     The Layout is initialized with a single child, which is given chars and
-    colors provided at Layout creation. This child is available as l.children[0]
-    or as l.background
+    colors provided at Layout creation. This child is available as
+    ``l.children[0]`` or as ``l.background``. Its type is always ``Widget``.
+
     The Layout automatically redraws itself on `tick` event, whether its
     children have updated or not.
     
-    Does not currently support JSON serialization
+    Does not support JSON serialization
+
+    :param chars: chars for layout BG.
+
+    :param colors: colors for layout BG.
     """
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
@@ -371,12 +403,16 @@ class Layout(Widget):
     # Operations on children
     def add_child(self, child, pos, skip_checks = False):
         """
-        Add a widget as a child at a given (relative) position.
+        Add a widget as a child at a given position.
+
         The child has to be a Widget or a Widget subclass that haven't yet been
         added to this Layout and whose dimensions are less than or equal to the
-        Layout's
-        :param child:
-        :return:
+        Layout's. The position is in the Layout coordinates, ie relative to its
+        top left corner.
+
+        :param child: A widget to add.
+
+        :param pos: A widget position, (x, y) 2-tuple
         """
         if not isinstance(child, Widget):
             raise BearLayoutException('Cannot add non-Widget to a Layout')
@@ -402,12 +438,13 @@ class Layout(Widget):
     def remove_child(self, child, remove_completely=True):
         """
         Remove a child from a Layout.
+
         :param child: the child to remove
+
         :param remove_completely: if False, the child is only removed from the
         screen, but remains in the children list. This is not intended to be
-        used and is included only to prevent self.move_child from messing with
-        child order.
-        :return:
+        used and is included only to prevent ``self.move_child`` from messing
+        with child order.
         """
         if child not in self.children:
             raise BearLayoutException('Layout can only remove its child')
@@ -423,6 +460,13 @@ class Layout(Widget):
             child.parent = None
     
     def move_child(self, child, new_pos):
+        """
+        Remove the child and add it at a new position.
+
+        :param child: A child Widget
+
+        :param new_pos: An (x, y) 2-tuple within the layout.
+        """
         self.remove_child(child, remove_completely=False)
         self.add_child(child, pos=new_pos, skip_checks=True)
     
@@ -449,7 +493,6 @@ class Layout(Widget):
     def _rebuild_self(self):
         """
         Build fresh chars and colors for self
-        :return:
         """
         # TODO: Support needs_redraw like in ECSLayout
         chars = copy_shape(self.chars, ' ')
@@ -472,8 +515,7 @@ class Layout(Widget):
     
     def on_event(self, event):
         """
-        The Layout redraws itself on every frame
-        :return:
+        Redraw itself on every tick
         """
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
@@ -485,8 +527,10 @@ class Layout(Widget):
         """
         Get an absolute position (in terminal coordinates) for any location
         within self.
-        :param relative_pos:
-        :return:
+
+        :param relative_pos: An (x, y) 2-tuple in Layout coordinates
+
+        :return: An (x, y) 2-tuple for the same point in terminal coordinates.
         """
         self_pos = self.terminal.widget_locations(self).pos
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
@@ -497,13 +541,15 @@ class Layout(Widget):
 
 class ScrollBar(Widget):
     """
-    A scrollbar to be used with ScrollableLayout. On creation accepts the
-    following parameters:
-    `orientation` -- one of 'vertical' or 'horizontal'
-    `length` -- int
-    'colors' -- two BLT-compatible colors for background and the moving thingy
-    
-    Does not accept input, does not support serialization
+    A scrollbar to be used with ScrollableLayout.
+
+    Does not accept input, does not support serialization.
+
+    :param orientation: Scrolling direction. One of 'vertical' or 'horizontal'
+
+    :param length: Scrollbar length, in chars.
+
+    :param colors: A 2-tuple of (BG colour, moving thingy colour)
     """
     def __init__(self, orientation='vertical', length=10,
                  colors=('gray', 'white')):
@@ -525,11 +571,12 @@ class ScrollBar(Widget):
     def show_pos(self, position, percentage):
         """
         Move the scrollbar.
+
         :param position: Float. The position of the top (or left) side of the
         scrollbar, as part of its length
+
         :param percentage: Float. The lengths of the scrollbar, as part of the
         total bar length
-        :return:
         """
         # Not really effective, but still quicker than Layout would be
         # Single-widget bar gets redrawn only when called, while a Layout
@@ -556,9 +603,15 @@ class ScrollableLayout(Layout):
     size of the entire layout, not the visible area. The latter is initialized
     by `view_pos` and `view_size` arguments.
     
-    Works by overloading _rebuild_self to only show a part of child_pointers
-    
-    Does not support JSON serialization
+    Does not support JSON serialization.
+
+    :param chars: Layout BG chars.
+
+    :param colors: Layout BG colors.
+
+    :param view_pos: a 2-tuple (x,y) for the top left corner of visible area, in Layout coordinates.
+
+    :param view_size: a 2-tuple (width, height) for the size of visible area.
     """
     def __init__(self, chars, colors,
                  view_pos=(0, 0), view_size=(10, 10)):
@@ -579,7 +632,6 @@ class ScrollableLayout(Layout):
         Same as `Layout()._rebuild_self`, but all child positions are also
         offset by `view_pos`. Obviously, only `view_size[1]` lines
         `view_size[0]` long are set as `chars` and `colors`.
-        :return:
         """
         chars = [[' ' for x in range(self.view_size[0])] \
                  for y in range(self.view_size[1])]
@@ -608,11 +660,11 @@ class ScrollableLayout(Layout):
     
     def scroll_to(self, pos):
         """
-        Move field of view to `pos`.
+        Move field of view to ``pos``.
         
-        Raises `BearLayoutException` on incorrect position
-        :param pos: tuple of ints
-        :return:
+        Raises ``BearLayoutException`` on incorrect position
+
+        :param pos: A 2-tuple of (x, y) in layout coordinates
         """
         if not (len(pos) == 2 and all((isinstance(x, int) for x in pos))):
             raise BearLayoutException('Field of view position should be 2 ints')
@@ -623,11 +675,11 @@ class ScrollableLayout(Layout):
     
     def scroll_by(self, shift):
         """
-        Move field of view by `shift[0]` to the right and by `shift[1]` down.
+        Move field of view by ``shift[0]`` to the right and by ``shift[1]`` down.
         
-        Raises `BearLayoutException` on incorrect position
-        :param shift: tuple of ints
-        :return:
+        Raises ``BearLayoutException`` on incorrect position
+
+        :param shift: A 2-tuple of (dx, dy) in layout coordinates
         """
         pos = (self.view_pos[0] + shift[0], self.view_pos[1] + shift[1])
         self.scroll_to(pos)
@@ -747,6 +799,12 @@ class Animation:
     the same, doing otherwise is just asking for trouble), frame ID validity is
     not checked until deserialization and, if incorrect, are not guaranteed to
     work.
+
+    :param frames: a list of (chars, colors) tuples
+
+    :param fps: animation speed, in frames per second. If higher than terminal FPS, it will be slowed down.
+
+    :param frame_ids: an optional list of frame names in atlas, to avoid dumping frames. Raises ``BearJSONException`` if its length isn't equal to that of frames.
     """
     def __init__(self, frames, fps, frame_ids=None):
         if not all((shapes_equal(x[0], frames[0][0]) for x in frames[1:])) \
@@ -787,13 +845,11 @@ class SimpleAnimationWidget(Widget):
     """
     A simple animated widget that cycles through the frames.
 
-    Accepts two parameters on creation:
-    `frames` an iterable of (chars, colors) tuples. These should all be
-    the same size
-    `fps` frames per second.
-    `emit_ecs`: whether to emit ecs_update events on every frame. Useless for
-    widgets outside ecs system, but those on ECSLayout are not redrawn unless
-    this event is emitted or something else causes ECSLayout to redraw
+    :param frames: An iterable of (chars, colors) tuples. These should all be the same size.
+
+    :param fps: Animation speed, in frames per second. If higher than terminal FPS, it will be slowed down.
+
+    :param emit_ecs: If True, emit ecs_update events on every frame. Useless for widgets outside ECS, but those on ``ECSLayout`` are not redrawn unless this event is emitted or something else causes ECSLayout to redraw.
     """
     
     def __init__(self, animation, emit_ecs=True):
@@ -834,6 +890,17 @@ class SimpleAnimationWidget(Widget):
 class MultipleAnimationWidget(Widget):
     """
     A widget that is able to display multiple animations.
+
+    Plays only one of the animations, unless ordered to change it by
+    ``self.set_animation()``
+
+    :param animations: A dict of {animation_id: Animation()}
+
+    :param initial_animation: the animation to start from.
+
+    :param emit_ecs: If True, emit ecs_update events on every frame. Useless for widgets outside ECS, but those on ``ECSLayout`` are not redrawn unless this event is emitted or something else causes ECSLayout to redraw.
+
+    :param cycle: if True, cycles the animation indefinitely. Otherwise stops at the last frame. Default False.
     """
     def __init__(self, animations, initial_animation,
                  emit_ecs=True, cycle=False):
@@ -888,9 +955,10 @@ class MultipleAnimationWidget(Widget):
     def set_animation(self, anim_id, cycle=False):
         """
         Set the next animation to be played.
+
         :param anim_id: Animation ID. Should be present in self.animations
+
         :param cycle: Whether to cycle the animation. Default False.
-        :return:
         """
         if anim_id not in self.animations:
             raise BearException('Incorrect animation ID')
@@ -917,22 +985,26 @@ class MultipleAnimationWidget(Widget):
 class Label(Widget):
     """
     A widget that displays text.
-    Accepts only a single string, whether single- or multiline.
-    Does not (yet) support complex text markup used by bearlibterminal
+
+    Accepts only a single string, whether single- or multiline (ie containing
+    ``\n`` or not. Does not support any complex text markup. Label's text can be
+    edited at any time by setting label.text property. Note that it overwrites
+    any changes to `self.chars` and `self.colors` made after setting `self.text`
+    the last time.
+
+    Unlike text, Label's height and width cannot be changed. Set these to
+    accomodate all possible inputs during Label creation.
+
     :param text: string to be displayed
+
     :param just: horizontal text justification, one of 'left', 'right'
     or 'center'. Default 'left'.
-    :param color: bearlibterminal-compatible color. Default 'white'
-    :param width: text area width. Defaults to the length of the longest
-    substring in `text`.
-    :param height: text area height. Defaults to the line count in `text`
 
-    Label's text can be edited at any time by setting label.text property. Note
-    that it overwrites any changes to `self.chars` and `self.colors` made after
-    setting `self.text` the last time.
-    
-    Unlike text, Label's height and width cannot be changed. Set its height and
-    width to accomodate all possible inputs during Label creation.
+    :param color: bearlibterminal-compatible color. Default 'white'
+
+    :param width: text area width. Defaults to the length of the longest ``\n``-delimited substring in ``text``.
+
+    :param height: text area height. Defaults to the line count in `text`
     """
     
     def __init__(self, text, chars=None, colors=None,
@@ -1031,7 +1103,8 @@ class InputField(Label):
     
     The length of the input line is limited by the InputField size. When the
     input is finished (by pressing ENTER), InputField emits a
-    `BearEvent(event_type='text_input', event_value=(field.name, field.text))`
+    ``BearEvent(event_type='text_input', event_value=(field.name, field.text))``
+
     Since BLT has no support for system keyboard layouts, only supports QWERTY
     Latin. This also applies to non-letter symbols: for example, comma and
     period are considered to be different keys even in Russian layout, where
@@ -1100,11 +1173,8 @@ class InputField(Label):
     def finish(self):
         """
         Finish accepting the input and emit the 'text_input' event at the next
-        opportunity.
-        
-        The event will not be actually emitted until the next event is passed
-        to on_event.
-        :return:
+        opportunity. This opportunity will not present itself until the next
+        event is passed to ``self.on_event``.
         """
         self.accept_input = False
         self.finishing = True
@@ -1144,6 +1214,7 @@ class InputField(Label):
 class FPSCounter(Label):
     """
     A simple widget that measures FPS.
+
     Actually just prints 1/(average runtime over the last 100 ticks in seconds),
     so it takes 100 ticks to get an accurate reading. Not relevant except on the
     first several seconds of the program run or after FPS has changed, but if it
@@ -1178,10 +1249,10 @@ class MousePosWidget(Label):
     """
     A simple widget akin to FPSCounter that listens to TK_MOUSE_MOVE events.
     
-    In order to work, it needs `self.terminal` to be set to the current
+    In order to work, it needs ``self.terminal`` to be set to the current
     terminal, which means it should either be added to the terminal directly
-    (without any Layouts) or it should be set manually before MousePosWidget
-    gets its first `tick` event.
+    (without any Layouts) or terminal should be set manually before
+    MousePosWidget gets its first ``tick`` event.
     """
     
     def __init__(self, **kwargs):
@@ -1190,11 +1261,11 @@ class MousePosWidget(Label):
     def on_event(self, event):
         if event.event_type == 'misc_input' and \
                      event.event_value == 'TK_MOUSE_MOVE':
-            self.text = self.get_mouse_line()
+            self.text = self._get_mouse_line()
         if isinstance(self.parent, BearTerminal):
             self.terminal.update_widget(self)
 
-    def get_mouse_line(self):
+    def _get_mouse_line(self):
         if not self.terminal:
             raise BearException('MousePosWidget is not connected to a terminal')
         x = str(self.terminal.check_state('TK_MOUSE_X')).rjust(3, '0')
@@ -1205,10 +1276,12 @@ class MousePosWidget(Label):
         raise BearException('MousePosWidget does not support __repr__ serialization')
     
 # Listeners
+
+
 class Listener:
     """
     A base class for the things that need to interact with the queue (and maybe
-    the terminal), but aren't widgets.
+    the terminal), but aren't Widgets.
     """
     def __init__(self):
         self.terminal = None
@@ -1219,8 +1292,8 @@ class Listener:
     def register_terminal(self, terminal):
         """
         Register a terminal with which this listener will interact
+
         :param terminal: A BearTerminal instance
-        :return:
         """
         if not isinstance(terminal, BearTerminal):
             raise TypeError('Only BearTerminal instances registered by Listener')
@@ -1230,9 +1303,11 @@ class Listener:
 class ClosingListener(Listener):
     """
     The listener that waits for TK_CLOSE input event (Alt-F4 or closing window)
-    and sends the shutdown service event to the queue. All widgets are expected
-    to listen to it and immediately save their data or whatever they need to do.
-    On the next tick ClosingListener closes the terminal and queue altogether.
+    and sends the shutdown service event to the queue.
+
+    All widgets are expected to listen to it and immediately save their data or
+    do whatever they need to do about it. On the next tick ClosingListener
+    closes the terminal and queue altogether.
     """
     def __init__(self):
         super().__init__()
@@ -1253,7 +1328,13 @@ class ClosingListener(Listener):
 
 class LoggingListener(Listener):
     """
-    A listener that logs the events it accepts
+    A listener that logs the events it gets.
+
+    This Listener just prints whatever events it gets to sys.stderr. The correct
+    way to use it is just to subscribe it to the events of interest and watch
+    the output. If logging non-builtin events, make sure that their
+    ``event_value`` can be converted to a string (uses ``str(value)``, not
+    ``repr(value)`` to avoid dumping entire JSON representations.
     """
     def __init__(self, handle):
         super().__init__()
