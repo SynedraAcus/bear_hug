@@ -12,14 +12,20 @@ import inspect
 import os
 import time
 from copy import copy
+from collections import namedtuple
 
 
 class BearTerminal:
     """
     A main terminal class.
-    Accepts bearlibterminal library configuration options as kwargs to __init__.
-    Currently only a library settings aresupported and there is no support for
-    changing them on the fly, but that's subject to fixing.
+
+    This class corresponds to a single window and is responsible for drawing
+    whatever widgets get added to this window, as well as processing any input.
+
+    Accepts `bearlibterminal library configuration options
+    <http://foo.wyrd.name/en:bearlibterminal:reference:configuration>`_ as
+    kwargs to ``self.__init__``. Currently only library settings are supported
+    and there is no support for changing them on the fly.
     """
     # TODO: wrap bearlibterminal parameters in @property
     # TODO: change bearlibterminal parameters on the fly
@@ -154,7 +160,7 @@ class BearTerminal:
         'TK_J': 13, 'TK_F4': 61}
     
     def __init__(self, font_path='../demo_assets/cp437_12x12.png',
-                 *args, **kwargs):
+                 **kwargs):
         if kwargs:
             if any(x not in self.accepted_kwargs for x in kwargs.keys()):
                 raise BearException('Only bearlibterminal library settings '
@@ -171,7 +177,7 @@ class BearTerminal:
         #  destroyed or resized.
         self._widget_pointers = [None for x in range(256)]
         self.default_color = 'white'
-        # TODO: make font_path system independent
+        # TODO: make font_path system independent via os.path
         self.font_path = font_path
 
     #  Methods that replicate or wrap around blt's functions
@@ -179,8 +185,9 @@ class BearTerminal:
     def start(self):
         """
         Open a terminal and place it on the screen.
-        Applies library settings that were set in `__init__()`
-        :return:
+
+        Library settings that were passed as kwargs to `self.__init__()` get
+        actually applied during when this method is executed.
         """
         terminal.open()
         terminal.set(
@@ -191,8 +198,7 @@ class BearTerminal:
         
     def clear(self):
         """
-        Remove all widgets from this terminal, but do not close it
-        :return:
+        Remove all widgets from this terminal, but do not close it.
         """
         drawables = copy(self.widget_locations)
         for drawable in drawables:
@@ -202,16 +208,16 @@ class BearTerminal:
     def refresh(self):
         """
         Refresh a terminal.
-        Places whatever changes were made by `*_widget` methods on the screen.
-        :return:
+
+        Actually draws whatever changes were made by ``*_widget`` methods.
         """
         terminal.refresh()
 
     def close(self):
         """
         Close a terminal.
+
         Does not destroy Widget objects or call any other cleanup routine.
-        :return:
         """
         terminal.close()
 
@@ -221,15 +227,17 @@ class BearTerminal:
                    pos=(0, 0), layer=0, refresh=False):
         """
         Add a widget to the terminal and set `widget.terminal` to `self`.
+
         No two widgets are allowed to overlap within a layer and no widget can
         be added twice.
+
         :param widget: a Widget instance
+
         :param pos: top left corner of the widget
+
         :param layer: layer to place the widget on
-        :param refresh: whether to refresh terminal after adding the widget.
-        If this is False, the widget will not be actually shown until the next
-        `terminal.refresh()` call
-        :return:
+
+        :param refresh: whether to refresh terminal after adding the widget. If False, the widget will not be actually shown until the next ``terminal.refresh()`` call
         """
         if widget in self.widget_locations.keys():
             raise BearException('Cannot add the same widget twice')
@@ -251,12 +259,14 @@ class BearTerminal:
     
     def remove_widget(self, widget, refresh=False):
         """
-        Remove widget from the terminal
+        Remove widget from the terminal.
+
+        This method does not cause or imply the destruction of Widget object; it
+        merely removes it from the terminal.
+
         :param widget: A widget to be removed
-        :param refresh: whether to refresh the terminal after removing a widget.
-        If this is False, the widget will be visible until the next
-        `terminal.refresh()` call
-        :return:
+
+        :param refresh: whether to refresh the terminal after removing a widget. If False, the widget will be visible until the next ``terminal.refresh()`` call
         """
         corner = self.widget_locations[widget].pos
         terminal.layer(self.widget_locations[widget].layer)
@@ -274,10 +284,13 @@ class BearTerminal:
     def move_widget(self, widget, pos, refresh=False):
         """
         Move widget to a new position.
-        Widgets can only be moved within the layer.
-        :param widget:
-        :param pos:
-        :return:
+
+        Widgets can only be moved within the layer. If it is necessary to move
+        a widget from one layer to another, it should be removed and added anew.
+
+        :param widget: A widget to be moved
+
+        :param pos: :param refresh: whether to refresh the terminal after removing a widget. If False, the widget won't move on screen until the next ``terminal.refresh()`` call
         """
         layer = self.widget_locations[widget].layer
         self.remove_widget(widget)
@@ -287,9 +300,13 @@ class BearTerminal:
 
     def update_widget(self, widget, refresh=False):
         """
-        Actually place widget chars on screen.
-        :param widget:
-        :return:
+        Actually draw widget chars on screen.
+
+        If ``widget.chars`` or ``widget.colors`` have changed, this method will
+        make these changes visible. It is also called by ``self.add_widget()``
+        and other methods that have a ``refresh`` argument.
+
+        :param widget: A widget to be updated.
         """
         if widget not in self.widget_locations:
             raise BearException('Cannot update non-added Widgets')
@@ -315,12 +332,11 @@ class BearTerminal:
 
     def get_widget_by_pos(self, pos, layer=None):
         """
-        Returns the widget currently placed at the given position.
-        If layer is set, checks only that layer. Otherwise returns the widget
-        at the highest layer.
-        :param pos: 
-        :param layer: 
-        :return: 
+        Return the widget currently placed at the given position.
+
+        :param pos: Position (a 2-tuple of ints)
+
+        :param layer: A layer to look at. If this is set to valid layer number, returns the widget (if any) from that layer. If not set, return the widget from highest layer where a given cell is non-empty.
         """
         if layer:
             return self._widget_pointers[layer][pos[0]][pos[1]]
@@ -333,12 +349,13 @@ class BearTerminal:
     # Input
     def check_input(self):
         """
-        Check if terminal has input. If so, yield corresponding `BearEvent`(s)
+        Check if terminal has input. If so, yield corresponding ``BearEvent``(s).
+
         This method returns an iterator because it's possible there would be
         more than one event in a single tick, eg when two buttons are pressed
         simultaneously.
-        :param self:
-        :return:
+
+        :yields: BearEvent instances with ``event_type`` set to ``misc_input``, ``key_up`` or ``key_down``.
         """
         while terminal.has_input():
             # Process the input event
@@ -354,11 +371,12 @@ class BearTerminal:
     
     def check_state(self, query):
         """
-        A wrapper around BLT `state` function
-        Accepts any of the TK_* strings and returns whatever terminal.state has
+        Wrap BLT `state <http://foo.wyrd.name/en:bearlibterminal:reference#state>`_
+
+        Accepts any of the ``TK_*`` strings and returns whatever ``terminal.state`` has
         to say about it.
-        :param query:
-        :return:
+
+        :param query: query string
         """
         return terminal.state(self.state_constants[query])
 
@@ -367,20 +385,37 @@ class BearTerminal:
 
 class BearLoop:
     """
-    A loop that passes event around every 1/fps seconds.
-    FPS is only set on loop creation, which will probably be fixed later.
-    Every tick, the loop emits two events. In the beginning of the tick it's
-    'tick' event whose value is time since the last similar event (in seconds).
-    In the end of the tick it's 'service' event with the value 'tick_over',
-    meant to allow widgets to update themselves to reflect whatever
-    changed in the last event. The first event is guaranteed to be emitted
-    before any other events related to this tick; the former is issued only
-    after the entire queue is processed, but the responses to it (if any) will
-    be dispatched after itself and before the next 'tick' event.
-    Generally, it's safer not to emit events in response to 'tick_over' event,
-    because whatever happens in response to *them* will only be drawn on the
-    next tick.
+    A loop that passes events around every 1/fps seconds.
+
+    Every tick, the loop calls its ``run_iteration()`` method, adding
+    tick-related and input-related events to the queue, and then forcing it to
+    start passing all events to the correct subscribers.
+
+    There are two tick-related events. In the beginning of the tick it's
+    ``tick``-type event whose value is time since the last similar event (in
+    seconds). This is guaranteed to be emitted before any other events from this
+    tick, since the queue wouldn't finish the previous one until it was empty.
+
+    In the end of the tick it's a ``service``-type event with the value
+    'tick_over', which is emitted after the entire queue has been processed.
+    It is meant to let subscribers know that the tick is over and nothing is
+    going to happen until the next one. This is, for example, a perfect moment
+    for a Layout to redraw itself, or for a logger to write everything down.
+
+    If any events are emitted in response to this event, they will be passed
+    around before the next ``tick``. This is a great source of bugs, so it is
+    not advised to respond to ``tick_over`` unless absolutely necessary.
+
+    The loop cannot be started until it has a valid terminal. When the loop is
+    stopped, this terminal is shut down.
+
+    :param terminal: a BearTerminal instance to collect input from.
+
+    :param queue: a bear_hug.event.BearEventDispatcher instance to send events to.
+
+    :param fps: a number of times per second this loop should process events.
     """
+
     def __init__(self, terminal, queue, fps=30):
         # Assumes terminal to be running
         self.terminal = terminal
@@ -394,8 +429,8 @@ class BearLoop:
     def run(self):
         """
         Start a loop.
-        It would run indefinitely until stopped with `self.stop`
-        :return:
+
+        It would run until stopped with ``self.stop()``
         """
         # An imaginary "zeroth" tick to give the first tick correct timing
         self.last_time = time.time() - self.frame_time
@@ -404,7 +439,7 @@ class BearLoop:
             # Sends time since last tick *started*
             t = time.time() - self.last_time
             self.last_time = time.time()
-            self.run_iteration(t)
+            self._run_iteration(t)
             sleep_time = self.frame_time - time.time() + self.last_time
             if sleep_time > 0.05*self.frame_time:
                 # If frame was finished early, wait for it
@@ -419,13 +454,13 @@ class BearLoop:
                
     def stop(self):
         """
-        Stop the loop.
-        It would quit after finishing the current iteration
-        :return:
+        Order the loop to stop.
+
+        It would not actually do it until the current tick is processed.
         """
         self.stopped = True
     
-    def run_iteration(self, time_since_last_tick):
+    def _run_iteration(self, time_since_last_tick):
         # Get input events, if any
         for event in self.terminal.check_input():
             self.queue.add_event(event)
@@ -459,6 +494,7 @@ class WidgetLocation:
     """
     Data class with position and layer of a Widget
     """
+    __slots__ = 'pos', 'layer'
     def __init__(self, pos, layer):
         self.pos = pos
         self.layer = layer
