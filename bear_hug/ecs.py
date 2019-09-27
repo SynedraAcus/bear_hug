@@ -8,8 +8,8 @@ to do something useful should be components calling something like
 The creation of a new Entity is announced by the following event:
 ``BearEvent(event_type='ecs_create', event_value=entity)``
 
-It is the only event type that uses the actual entity object, not its ID, as the
-event_value. When this event is emitted, the entity should be ready to work;
+It is an only event type that uses the actual entity object, not its ID, as
+``event_value``. When this event is emitted, the entity should be ready to work;
 in particular, all its components should be subscribed to the appropriate events.
 
 Both Entities and Components can be serialized to JSON using ``repr(object)``
@@ -49,10 +49,8 @@ class Entity:
 
     :param id: a string used as an Entity ID.
 
-    :param components: an iterable of Component instances that can will be added
-    to this entity.
+    :param components: an iterable of Component instances that can will be added to this entity.
     """
-    
     def __init__(self, id='Default ID', components=[]):
         self.components = []
         self.id = id
@@ -109,9 +107,10 @@ class Component(Listener):
     A root component class.
     
     Component name is expected to be the same between all components of the same
-    general type (normally, a base class for a given function and all its
+    general type (normally, base class for a given role, like position
+    component, AI/input controller or a widget interface) and all its
     subclasses). Component inherits from Listener and is therefore able to
-    receive and return ``BearEvent``s. Of course, it needs the correct
+    receive and return ``BearEvent``. Of course, it needs the correct
     subscriptions to actually get them.
 
     ``repr(component)`` is used for serialization and should generate a valid
@@ -178,10 +177,9 @@ class Component(Listener):
     def on_event(self, event):
         """
         Component's event callback. Should be overridden if subclasses want to
-        accept events.
+        process events.
 
         :param event: BearEvent instance
-        :return:
         """
         pass
 
@@ -435,8 +433,8 @@ class DestructorComponent(Component):
     that has to do with it.
 
     When used, all owner's components except this one are unsubscribed from all
-    events, but not deleted to let whatever interactions the owner was involved
-    in finish cleanly. The deletion happens on 'tick_over'
+    events. The deletion does not happen until tick end, to let any running
+    interactions involving the owner finish cleanly.
     """
     def __init__(self, *args, is_destroying=False, **kwargs):
         super().__init__(*args, name='destructor', **kwargs)
@@ -445,7 +443,8 @@ class DestructorComponent(Component):
     
     def destroy(self):
         """
-        Destruct this component's owner.
+        Destroy this component's owner.
+
         Unsubscribes owner and all its components from the queue and sends
         'ecs_remove'. Then all components are deleted. Entity itself is left at
         the mercy of garbage collector.
@@ -483,10 +482,10 @@ class CollisionComponent(Component):
     A component responsible for processing collisions of this object.
 
     This is a base class, so its event processing just calls
-    ``self.collided_into`` when owner moves into something, and
-    ``self.collided_by`` when something else moves into the owner. Actual
-    collision processing logic should be provided by subclasses by overriding
-    these two methods.
+    ``self.collided_into(other_entity)`` when owner moves into something, and
+    ``self.collided_by(other_entity)`` when something else moves into the owner.
+    Actual collision processing logic should be provided by subclasses by
+    overriding these two methods.
     """
 
     def __init__(self, *args, **kwargs):
@@ -630,10 +629,10 @@ class DecayComponent(Component):
 
 def deserialize_component(serial, dispatcher):
     """
-    Provided a JSON string, creates a necessary component.
-    
+    Load the component from a JSON string or dict.
+
     Does not subscribe a component to anything (which can be done either by a
-    caller or in the ``ComponentSubclass.__init__``) or assign it to any Entity
+    caller or in the ``ComponentClass.__init__``) or assign it to any Entity
     (which is probably done within ``deserialize_entity``). The class of a
     deserialized Component should be imported by the code that calls this
     function, or someone within its call stack.

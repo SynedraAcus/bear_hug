@@ -29,9 +29,9 @@ class ECSLayout(Layout):
     Announces that a new Entity has been created and needs to be registered for
     ECSLayout. Does not cause it to be placed on screen. The same event tells
     the EntityTracker about any newly-created Entities. It should not be emitted
-    until the Entity has at least ID and a WidgetComponent.
+    until the Entity has at least an ID and a WidgetComponent.
     
-    `BearEvent(event_type='ecs_add', event_value=(entity, x, y))`.
+    ``BearEvent(event_type='ecs_add', event_value=(entity, x, y))``.
 
     Announces that the widget of the entity in question should be added to the
     ECSLayout at (x;y). This event should not be emitted before both entity and
@@ -48,15 +48,15 @@ class ECSLayout(Layout):
 
     ``BearEvent(event_type='ecs_remove', event_value=entity)``
 
-    Announces that the widget of the entity in question should be removed from
+    Announces that the widget of a given entity should be removed from
     the ECSLayout, but does not cause or imply the its destruction. It is to be
-    used when the Entity currently on screen needs to be hidden, but it is
+    used when the Entity currently on screen needs to be hidden, but is
     expected to be shown again later.
 
     ``BearEvent(event_type='ecs_destroy', event_value=entity)``
 
-    Announces that the widget of the entity in question should be removed from
-    the ECSLayout, as well as from its entities and widget lists. This event is
+    Announces that the widget of a given entity should be removed from
+    the ECSLayout, as well as from its entities and widgets lists. This event is
     emitted when the entity is destroyed (eg by DestructorComponent) and used by
     EntityTracker to know which Entities no longer exist.
 

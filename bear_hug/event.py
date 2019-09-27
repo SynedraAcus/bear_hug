@@ -42,10 +42,9 @@ ECS events:
 'ecs_remove', 'ecs_scroll_by', 'ecs_scroll_to', 'ecs_update'.  These are
 described in detail within bear_hug.ecs_widgets docs.
 
-Any user-defined ``event_type``s need to be registered before use via
+Any user-defined ``event_type`` needs to be registered before use via
 ``dispatcher.register_event_type()``. Unknown event types can not be added to
-the queue. Event values, on the other hand, are not validated except by whoever
-has subscribed to them.
+the queue. Event values, on the other hand, are not validated at all.
 """
 
 from bear_hug.bear_utilities import BearLoopException
@@ -54,7 +53,7 @@ from collections import deque
 
 class BearEvent:
     """
-    Event data class. Has two params: event_type and event_value.
+    Event data class.
     """
     __slots__ = ('event_type', 'event_value')
     
@@ -108,17 +107,23 @@ class BearEventDispatcher:
         should be event types the listener subscribes to.
 
         If a string, the following rules apply:
+
         1. If a string equals 'all', the listener is subscribed to all currently
         registered event types.
+
         2. Elif a string starts with '*', the listener is subscribed to all
-        currently registered event types for whose name event_types[1:] is a
-        substring.
+        currently registered event types for whose type ``event_types[1:]`` is a
+        substring (regardless of its position). For example, '*ecs' subscribes
+        to all ECS events, like 'ecs_add', 'ecs_move', 'ecs_remove' and so on;
+        '*move' would subscribe only to 'ecs_move' and 'ecs_remove'.
+
         3. Else a string is interpreted as a single event type.
 
-        Whether in list or string, incorrect event types raise
-        BearLoopException. All non-string event types are treated as incorrect.
+        Whether in list or string, unregistered event types raise
+        BearLoopException.
 
         :param listener: a listener to add.
+
         :param event_types: event types to which it wants to subscribe
         """
         if not hasattr(listener, 'on_event'):
@@ -156,7 +161,6 @@ class BearEventDispatcher:
         :param listener: listener to unsubscribe
 
         :param event_types: a list of event types to unsubscribe from or 'all'. Defaults to 'all'
-        :return:
         """
         if event_types == 'all':
             event_types = self.listeners.keys()

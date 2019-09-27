@@ -152,26 +152,23 @@ class Widget:
     ``str``, ``int`` or ``float``) are safe; custom ones are currently
     unsupported.
 
-    For example, the following is a valid JSON:
+    For example, the following is a valid JSON::
 
-    ```
-    {"class": "MyWidget",
-    "chars": ["b,b,b", "a,b,a", "b,a,b"],
-    "colors": ["#fff,#fff,#fff", "#000,#fff,#000", "#fff,#000,#fff"],
-    "former_owners": ["asd", "zxc", "qwe"],
-    "former_owners_type": "set"}
-    ```
+        {"class": "MyWidget",
+        "chars": ["b,b,b", "a,b,a", "b,a,b"],
+        "colors": ["#fff,#fff,#fff", "#000,#fff,#000", "#fff,#000,#fff"],
+        "former_owners": ["asd", "zxc", "qwe"],
+        "former_owners_type": "set"}
 
-    Its deserialization is equivalent to the following call:
-    ```
-    `x = MyWidget(chars=[['bbb'],
-                         ['aba'],
-                         ['bab']],
-                  colors=[['#fff','#fff','#fff'],
-                          ['#000','#fff','#000'],
-                          ['#fff','#000','#fff']],
-                  former_owners=set(['asd, 'zxc', 'qwe']))
-    ```
+    Its deserialization is equivalent to the following call::
+
+        x = MyWidget(chars=[['bbb'],
+                            ['aba'],
+                            ['bab']],
+                     colors=[['#fff','#fff','#fff'],
+                             ['#000','#fff','#000'],
+                             ['#fff','#000','#fff']],
+                     former_owners=set(['asd, 'zxc', 'qwe']))
 
     The following keys are forbidden: ``parent`` and ``terminal``. Kwarg
     validity is not controlled except by ``WidgetSubclass.__init__()``.
@@ -243,8 +240,8 @@ class Widget:
         updated via animation, updating label text, Layout's children being
         redrawn, etc., it will be un-flipped again.
 
-        Second, most ASCII-art does not take it well. Unlike raster and vector
-        graphics, there is no general way to flip an ASCII image
+        Second, most ASCII-art just doesn't take it well. Unlike raster and
+        vector graphics, there is no general way to flip an ASCII image
         programmatically (except, of course, flipping chars themselves which I
         find aesthetically unacceptable for my projects). It may work for random
         noisy tiles, like littered floors, grass and such, but for complex
@@ -786,12 +783,12 @@ class InputScrollable(Layout):
 # Animations and other complex decorative Widgets
 class Animation:
     """
-    A data class for animation, ie the sequence of the frames
+    A data class for animation, *ie* the sequence of the frames
     
-    Animation is serialized to JSON, preserving fps and either frame dumps
+    Animation can be serialized to JSON, preserving fps and either frame dumps
     (similarly to widget chars and colors) or frame image IDs. For the latter to
     work, these IDs should be provided during Animation creation via an optional
-    `frame_ids` kwarg. The deserializer will then use them with whichever atlas
+    ``frame_ids`` kwarg. The deserializer will then use them with whichever atlas
     is supplied to create the animation.
     
     Since this class has no idea of atlases and is unaware whether it was
@@ -802,7 +799,7 @@ class Animation:
 
     :param frames: a list of (chars, colors) tuples
 
-    :param fps: animation speed, in frames per second. If higher than terminal FPS, it will be slowed down.
+    :param fps: animation speed, in frames per second. If higher than terminal FPS, animation will be shown at terminal FPS.
 
     :param frame_ids: an optional list of frame names in atlas, to avoid dumping frames. Raises ``BearJSONException`` if its length isn't equal to that of frames.
     """
@@ -894,13 +891,13 @@ class MultipleAnimationWidget(Widget):
     Plays only one of the animations, unless ordered to change it by
     ``self.set_animation()``
 
-    :param animations: A dict of {animation_id: Animation()}
+    :param animations: A dict of ``{animation_id: Animation()}``
 
     :param initial_animation: the animation to start from.
 
-    :param emit_ecs: If True, emit ecs_update events on every frame. Useless for widgets outside ECS, but those on ``ECSLayout`` are not redrawn unless this event is emitted or something else causes ECSLayout to redraw.
+    :param emit_ecs: If True, emit ecs_update events on every frame. Useless for widgets outside ECS, but those on ``ECSLayout`` are not redrawn unless this event is emitted or something else causes the layout to redraw.
 
-    :param cycle: if True, cycles the animation indefinitely. Otherwise stops at the last frame. Default False.
+    :param cycle: if True, cycles the animation indefinitely. Otherwise stops at the last frame.
     """
     def __init__(self, animations, initial_animation,
                  emit_ecs=True, cycle=False):
@@ -989,8 +986,8 @@ class Label(Widget):
     Accepts only a single string, whether single- or multiline (ie containing
     ``\n`` or not. Does not support any complex text markup. Label's text can be
     edited at any time by setting label.text property. Note that it overwrites
-    any changes to `self.chars` and `self.colors` made after setting `self.text`
-    the last time.
+    any changes to ``self.chars`` and ``self.colors`` made after setting
+    ``self.text`` the last time.
 
     Unlike text, Label's height and width cannot be changed. Set these to
     accomodate all possible inputs during Label creation.
@@ -1247,12 +1244,16 @@ class FPSCounter(Label):
 
 class MousePosWidget(Label):
     """
-    A simple widget akin to FPSCounter that listens to TK_MOUSE_MOVE events.
+    A simple widget that reports current mouse position.
     
+
     In order to work, it needs ``self.terminal`` to be set to the current
     terminal, which means it should either be added to the terminal directly
     (without any Layouts) or terminal should be set manually before
-    MousePosWidget gets its first ``tick`` event.
+    MousePosWidget gets its first ``tick`` event. It is also important that this
+    class uses ``misc_input``:``TK_MOUSE_MOVE`` events to determine mouse
+    position, so it would report a default value of '000x000' until the mouse
+    has moved at least once.
     """
     
     def __init__(self, **kwargs):
@@ -1287,6 +1288,11 @@ class Listener:
         self.terminal = None
     
     def on_event(self, event):
+        """
+        The event callback. This should be overridden by child classes.
+
+        :param event: BearEvent instance
+        """
         raise NotImplementedError('Listener base class is doing nothing')
     
     def register_terminal(self, terminal):
@@ -1302,12 +1308,12 @@ class Listener:
     
 class ClosingListener(Listener):
     """
-    The listener that waits for TK_CLOSE input event (Alt-F4 or closing window)
-    and sends the shutdown service event to the queue.
+    The listener that waits for a ``TK_CLOSE`` input event (Alt-F4 or closing
+    window) and sends the shutdown service event to the queue when it gets one.
 
     All widgets are expected to listen to it and immediately save their data or
     do whatever they need to do about it. On the next tick ClosingListener
-    closes the terminal and queue altogether.
+    closes both terminal and queue altogether.
     """
     def __init__(self):
         super().__init__()
@@ -1330,11 +1336,11 @@ class LoggingListener(Listener):
     """
     A listener that logs the events it gets.
 
-    This Listener just prints whatever events it gets to sys.stderr. The correct
-    way to use it is just to subscribe it to the events of interest and watch
-    the output. If logging non-builtin events, make sure that their
-    ``event_value`` can be converted to a string (uses ``str(value)``, not
-    ``repr(value)`` to avoid dumping entire JSON representations.
+    It just prints whatever events it gets to sys.stderr. The correct
+    way to use this class is to subscribe an instance to the events of interest
+    and watch the output. If logging non-builtin events, make sure that their
+    ``event_value`` can be converted to a string. Converstion uses
+    ``str(value)``, not ``repr(value)`` to avoid dumping entire JSON representations.
     """
     def __init__(self, handle):
         super().__init__()

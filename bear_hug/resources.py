@@ -25,6 +25,7 @@ class ASCIILoader:
     def get_image(self):
         """
         Return the entire chars and colors of this loader
+
         :returns: chars, colors (two 2-nested lists of equal size)
         """
         if not self.chars or not self.colors:
@@ -73,10 +74,8 @@ class TxtLoader(ASCIILoader):
     A loader that reads a plaintext file.
 
     Accepts a filename (anything acceptable by `open()`) as a single position
-    argument.
-
-    Since plaintext files can not store colour, all chars are set to the same
-    colour.
+    argument. Since plaintext files don't store colour data, all loaded chars
+    will be the same colour.
 
     :param default_color: the color of chars.
 
@@ -132,9 +131,9 @@ class TxtLoader(ASCIILoader):
 
 class XpLoader(ASCIILoader):
     """
-    A loader that reads REXPaint '*.xp' files.
-    The file is never parsed until one of the ``get_*`` methods gets called. Its
-    existence, though, is checked on Loader creation.
+    A loader that reads `REXPaint <https://www.gridsagegames.com/rexpaint/>`_
+    ``*.xp`` files. The file is never parsed until one of the ``get_*`` methods
+    gets called. Its existence, though, is checked on Loader creation.
 
     As the bear_hug widget API does not allow multi-layered widgets,
     ``get_image`` and ``get_image_region`` return the image with the only the
@@ -145,7 +144,8 @@ class XpLoader(ASCIILoader):
     Background colors are ignored altogether.
 
     Most of the XP parsing in this class code is taken from MIT-licensed
-    XPLoaderPy3, copyright Sean Hagar, Erwan Castioni and Gawein Le Goff.
+    `XPLoaderPy3 <https://github.com/Edern76/XPLoaderPy3>`_, copyright Sean
+    Hagar, Erwan Castioni and Gawein Le Goff.
     """
 
     version_bytes = 4
@@ -439,11 +439,11 @@ class Atlas:
     keys, if any, are ignored. The purpose of this is, basically, to be able to
     address image regions by a human-readable name, so coordinates and sizes
     should describe valid regions in the loader. A single region may be
-    addressed by multiple names, but not the other way around.
+    called by multiple names, but not the other way around.
 
     :param loader: a Loader instance.
 
-    :param json_file: a string describing the path to a JSON file.
+    :param json_file: path to a JSON file (str).
     """
     def __init__(self, loader, json_file):
         self.loader = loader
