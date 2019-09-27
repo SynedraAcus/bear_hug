@@ -984,7 +984,7 @@ class Label(Widget):
     A widget that displays text.
 
     Accepts only a single string, whether single- or multiline (ie containing
-    ``\n`` or not. Does not support any complex text markup. Label's text can be
+    ``\n`` or not). Does not support any complex text markup. Label's text can be
     edited at any time by setting label.text property. Note that it overwrites
     any changes to ``self.chars`` and ``self.colors`` made after setting
     ``self.text`` the last time.

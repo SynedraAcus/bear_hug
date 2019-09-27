@@ -10,6 +10,7 @@ Welcome to bear_hug's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   Module API reference <modules>
 
 
 Indices and tables

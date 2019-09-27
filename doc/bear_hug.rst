@@ -6,7 +6,6 @@ Submodules
 
 .. toctree::
 
-   bear_hug.atlas_viewer
    bear_hug.bear_hug
    bear_hug.bear_utilities
    bear_hug.ecs
@@ -21,5 +20,4 @@ Module contents
 
 .. automodule:: bear_hug
    :members:
-   :undoc-members:
    :show-inheritance:
