@@ -32,9 +32,19 @@ release = '0.2'
 # ones.
 extensions = ['sphinx.ext.autodoc'
 ]
-autodoc_member_order = 'bysource'
-autodoc_mock_imports = ['simpleaudio']
-autodoc_inherit_docstrings = False
+# Autodoc config
+autodoc_member_order = 'bysource' # Do not sort classes alphabetically
+autodoc_mock_imports = ['simpleaudio', 'bearlibterminal'] # Non-builtin imports
+autodoc_inherit_docstrings = False # Self-explanatory
+
+# Github integration
+html_context = {
+    "display_github": True, # Integrate GitHub
+    "github_user": "synedraacus", # Username
+    "github_repo": "bear_hug", # Repo name
+    "github_version": "master", # Version
+    "conf_py_path": "/doc/", # Path in the checkout to the docs root
+}
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
