@@ -1,5 +1,7 @@
 ## Bear hug
 
+[![Documentation Status](https://readthedocs.org/projects/bear-hug/badge/?version=latest)](https://bear-hug.readthedocs.io/en/latest/?badge=latest)
+
 ### What is it?
 A bearlibterminal wrapper for building ASCII-art games and apps in python3.6+.
 Although based on the [bearlibterminal](http://foo.wyrd.name/en:bearlibterminal)
@@ -41,8 +43,10 @@ You can also check out [the repo for my beat-em-up](https://github.com/synedraac
 It's in a very early stage of development, though.  
 
 ### Where's the documentation?
-It's being written. Meanwhile, docstrings are pretty thorough.
-Installation is as simple as `pip install bear_hug`.
+API reference is available [here](https://bear-hug.readthedocs.io/en/latest/).
+A quickstart guide is currently being written. 
+
+
 
 ### What are the dependencies?
 Bearlibterminal and Python3.6+. To use sound, you will also need
