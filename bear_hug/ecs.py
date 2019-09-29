@@ -18,7 +18,8 @@ and then deserialized.
 
 from bear_hug.bear_utilities import BearECSException, BearJSONException, \
     rectangles_collide
-from bear_hug.widgets import Widget, Listener, deserialize_widget
+from bear_hug.widgets import Widget, Listener, deserialize_widget,\
+    SwitchingWidget
 from bear_hug.event import BearEvent, BearEventDispatcher
 
 import inspect
@@ -301,6 +302,39 @@ class WidgetComponent(Component):
         d = {'widget': loads(repr(self.widget)),
              'class': self.__class__.__name__}
         return dumps(d)
+
+
+class SwitchWidgetComponent(WidgetComponent):
+    """
+    A widget component that supports SwitchingWidget.
+
+    Provides methods to use its widget-switching abilities without other
+    components having to call Widget object directly.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not isinstance(self.widget, SwitchingWidget):
+            raise BearECSException(
+                'SwitchWidgetComponent can only be used with SwitchingWidget')
+
+    def switch_to_image(self, image_id):
+        """
+        Switch widget to a necessary image.
+
+        If image ID is incorrect, the widget will raise BearException.
+
+        :param image_id: image ID (str)
+        """
+        self.widget.switch_to_image(image_id)
+
+    def validate_image(self, image_id):
+        """
+        Return True if image_id is a valid ID for its widget
+
+        :param image_id: image ID (str)
+        """
+        return image_id in self.widget.images
 
 
 class PositionComponent(Component):
