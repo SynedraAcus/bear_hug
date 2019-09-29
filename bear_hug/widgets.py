@@ -275,6 +275,10 @@ class SwitchingWidget(Widget):
     These char/color pairs should all be the same shape. Does not do any
     transition animations.
 
+    ``chars`` and ``colors`` args, although accepted during creation, are
+    discarded. They do not affect the created widget in any way, nor are they
+    shown at any moment.
+
     :param images_dict: a dict of {image_id: (chars, colors)}
     :param initial_image: an ID of the first image to show. Should be a key in ``images_dict``.
     """
