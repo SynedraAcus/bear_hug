@@ -1287,9 +1287,12 @@ class Listener:
     """
     A base class for the things that need to interact with the queue (and maybe
     the terminal), but aren't Widgets.
+
+    :param terminal: BearTerminal instance
     """
-    def __init__(self):
-        self.terminal = None
+    def __init__(self, terminal=None):
+        if terminal is not None:
+            self.register_terminal(terminal)
     
     def on_event(self, event):
         """
