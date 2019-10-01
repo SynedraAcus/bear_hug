@@ -359,6 +359,7 @@ class PositionComponent(Component):
         self.y_waited = 0
         self.vx = vx
         self.vy = vy
+        self.last_move = None
         if self.dispatcher:
             dispatcher.register_listener(self, 'tick')
 
@@ -404,6 +405,9 @@ class PositionComponent(Component):
 
         :param emit_event: If True, emit an 'esc_move' event. There are a few cases (ie setting the coordinates after the component is created, but before the entity is added to the terminal) where this is undesirable.
         """
+        # This attr is set so that the turn could be undone (for example, that's
+        # what WalkerCollision uses to avoid impossible steps).
+        self.last_move = (x - self._x, y - self._y)
         self._x = x
         self._y = y
         if emit_event:
@@ -546,8 +550,7 @@ class WalkerCollisionComponent(CollisionComponent):
     screen edges), moves the entity back to where it came from.
 
     Expects both entities involved to have a PositionComponent and a
-    PassabilityComponent. Also expects owner's PositionComponent to have a
-    ``last_move`` attribute, which should be a tuple of (dx, dy).
+    PassabilityComponent.
     """
 
     def collided_into(self, entity):
