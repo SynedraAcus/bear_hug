@@ -569,9 +569,14 @@ class WalkerCollisionComponent(CollisionComponent):
                                        other.position.y +
                                        other.passability.shadow_pos[1]),
                                       other.passability.shadow_size):
+                    tmp_move = self.owner.position.last_move
                     self.owner.position.relative_move(
                         self.owner.position.last_move[0] * -1,
                         self.owner.position.last_move[1] * -1)
+                    # Do not change last_move after collision. We pretend that
+                    # this move never happened and other components may rely on
+                    # it
+                    self.owner.position.last_move = tmp_move
         else:
             # Processing collisions with screen edges without involving passability
             self.owner.position.relative_move(
