@@ -349,7 +349,8 @@ class PositionComponent(Component):
 
     :param vy: Vertical speed (chars per second)
     """
-    def __init__(self, dispatcher, x=0, y=0, vx=0, vy=0, owner=None):
+    def __init__(self, dispatcher, x=0, y=0, vx=0, vy=0,
+                 last_move = (1, 0), owner=None):
         super().__init__(dispatcher, name='position', owner=owner)
         self._x = x
         self._y = y
@@ -359,7 +360,7 @@ class PositionComponent(Component):
         self.y_waited = 0
         self.vx = vx
         self.vy = vy
-        self.last_move = None
+        self.last_move = last_move
         if self.dispatcher:
             dispatcher.register_listener(self, 'tick')
 
@@ -461,7 +462,8 @@ class PositionComponent(Component):
              'x': self.x,
              'y': self.y,
              'vx': self.vx,
-             'vy': self.vy}
+             'vy': self.vy,
+             'last_move': self.last_move}
         return dumps(d)
                 
 
