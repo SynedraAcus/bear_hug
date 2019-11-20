@@ -179,6 +179,8 @@ class BearTerminal:
         self.default_color = 'white'
         # TODO: make font_path system independent via os.path
         self.font_path = font_path
+        # Buttons currently pressed (see check_input docstring)
+        self.currently_pressed = set()
 
     #  Methods that replicate or wrap around blt's functions
 
@@ -355,6 +357,20 @@ class BearTerminal:
         more than one event in a single tick, eg when two buttons are pressed
         simultaneously.
 
+        This method mostly just wraps bearlibterminal's input behaviour in
+        `events<foo.wyrd.name/en:bearlibterminal:reference:input>`_, with
+        a single exception: in bearlibterminal, when a key is pressed and held
+        for more than a single tick, it first emits key_down, then waits for
+        0.5 seconds. Then, if the key is not released, it assumes the key is
+        indeed held and starts spamming events every tick. This makes sense to
+        avoid messing up the typing (where a slow typist would get char
+        sequences like tthiisss).
+
+        Bearlibterminal, on the other hand, is meant mostly for games that
+        require more precise input timing. Therefore, it starts spamming
+        ``key_down`` events immediately after the button is pressed and expects
+        widgets and listeners to mind their input cooldowns themselves.
+
         :yields: BearEvent instances with ``event_type`` set to ``misc_input``, ``key_up`` or ``key_down``.
         """
         while terminal.has_input():
@@ -363,11 +379,14 @@ class BearTerminal:
             if in_event in self.misc_input:
                 yield BearEvent('misc_input', self.misc_input[in_event])
             elif in_event in self._down_codes:
-                yield BearEvent('key_down', self._down_codes[in_event])
+                self.currently_pressed.add(self._down_codes[in_event])
             elif in_event in self._up_codes:
+                self.currently_pressed.remove(self._up_codes[in_event])
                 yield BearEvent('key_up', self._up_codes[in_event])
             else:
                 raise BearException('Unknown input code {}'.format(in_event))
+        for key in self.currently_pressed:
+            yield BearEvent('key_down', key)
     
     def check_state(self, query):
         """
@@ -463,6 +482,7 @@ class BearLoop:
     def _run_iteration(self, time_since_last_tick):
         # Get input events, if any
         for event in self.terminal.check_input():
+            print(event.event_value)
             self.queue.add_event(event)
         self.queue.add_event(BearEvent(event_type='tick',
                                        event_value=time_since_last_tick))
