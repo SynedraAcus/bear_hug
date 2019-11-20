@@ -482,7 +482,6 @@ class BearLoop:
     def _run_iteration(self, time_since_last_tick):
         # Get input events, if any
         for event in self.terminal.check_input():
-            print(event.event_value)
             self.queue.add_event(event)
         self.queue.add_event(BearEvent(event_type='tick',
                                        event_value=time_since_last_tick))

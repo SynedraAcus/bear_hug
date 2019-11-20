@@ -1010,6 +1010,7 @@ class Label(Widget):
     
     def __init__(self, text, chars=None, colors=None,
                  just='left', color='white', width=None, height=None):
+        # TODO: add input delay to Label
         # If chars and colors are not provided, generate them. If they are,
         # typically from JSON dump, no checks are performed. Thus, in theory
         # it's possible to break this by providing overly big text and changing
