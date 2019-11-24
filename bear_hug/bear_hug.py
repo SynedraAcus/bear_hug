@@ -381,7 +381,13 @@ class BearTerminal:
             elif in_event in self._down_codes:
                 self.currently_pressed.add(self._down_codes[in_event])
             elif in_event in self._up_codes:
-                self.currently_pressed.remove(self._up_codes[in_event])
+                try:
+                    self.currently_pressed.remove(self._up_codes[in_event])
+                except KeyError:
+                    # It's possible that the button was pressed before launching
+                    # the bear_hug app, and released now. Then it obviously
+                    # couldn't be in self.currently_pressed, causing exception
+                    pass
                 yield BearEvent('key_up', self._up_codes[in_event])
             else:
                 raise BearException('Unknown input code {}'.format(in_event))
