@@ -557,7 +557,11 @@ class WalkerCollisionComponent(CollisionComponent):
 
     def collided_into(self, entity):
         if entity is not None:
-            other = EntityTracker().entities[entity]
+            try:
+                other = EntityTracker().entities[entity]
+            except KeyError:
+                # Silently pass collisions into nonexistent entities
+                return
             if 'passability' in self.owner.__dict__ and 'passability' in other.__dict__:
                 if rectangles_collide((self.owner.position.x +
                                        self.owner.passability.shadow_pos[0],
