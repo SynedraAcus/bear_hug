@@ -1097,6 +1097,7 @@ class Label(Widget):
         d['text'] = self.text
         d['just'] = self.just
         d['color'] = self.color
+        return dumps(d)
             
             
 class InputField(Label):
