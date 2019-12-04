@@ -365,6 +365,10 @@ class PositionComponent(Component):
             dispatcher.register_listener(self, 'tick')
 
     @property
+    def pos(self):
+        return (self._x, self._y)
+
+    @property
     def x(self):
         return self._x
 
