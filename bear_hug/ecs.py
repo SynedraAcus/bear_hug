@@ -77,7 +77,8 @@ class Entity:
             raise BearECSException('Cannot add component' +
                    '{} that shadows builtin attribute'.format(component.name))
         self.__dict__[component.name] = component
-        self.components.append(component.name)
+        if component.name not in self.components:
+            self.components.append(component.name)
         component.owner = self
     
     def remove_component(self, component_name):
@@ -496,7 +497,7 @@ class DestructorComponent(Component):
         self.dispatcher.add_event(BearEvent('ecs_destroy', self.owner.id))
         self.is_destroying = True
         # Destroys item on the 'tick_over', so that all
-        # existing events involving owner (including 'ecs_remove)' are processed
+        # existing events involving owner (including 'ecs_remove') are processed
         # normally, but unsubscribes it right now to prevent new ones from forming
         for component in self.owner.components:
             if component != self.name:
