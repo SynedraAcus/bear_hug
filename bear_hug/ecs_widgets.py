@@ -327,7 +327,13 @@ class ScrollableECSLayout(Layout):
             raise BearECSException(
                 'Attempting to remove nonexistent entity {} from ESCLayout'.
                 format(entity_id))
-        self.remove_child(self.entities[entity_id].widget.widget)
+        try:
+            self.remove_child(self.entities[entity_id].widget.widget)
+        except BearLayoutException:
+            # Silently ignore any attempt to remove entities which weren't ever
+            # actually placed on the layout (such as eg hands which were never
+            # used during the whole level)
+            pass
         del self.entities[entity_id]
 
     def on_event(self, event):
