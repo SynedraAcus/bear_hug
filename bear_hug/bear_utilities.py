@@ -187,3 +187,10 @@ class BearJSONException(BearException):
     Something wrong with JSON (de)serialization of widgets or entities.
     """
     pass
+
+
+class BearResourceException(BearException):
+    """
+    Something wrong with loading ASCII assets
+    """
+    pass

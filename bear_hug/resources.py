@@ -2,7 +2,8 @@
 Loaders for the various ASCII-art formats.
 """
 
-from bear_hug.bear_utilities import BearException, copy_shape, rotate_list
+from bear_hug.bear_utilities import BearException, BearResourceException,\
+    copy_shape, rotate_list
 from copy import deepcopy
 import base64
 import gzip
@@ -47,12 +48,13 @@ class ASCIILoader:
         :returns: chars, colors (two 2-nested lists of equal size).
         """
         if not self.chars or not self.colors:
-            raise BearException('Loader is empty')
+            raise BearResourceException('Loader is empty')
         # Checking for the correct pos and size
+        # Could be a single check, split for readability
         if x < 0 or x > len(self.chars[0]) or y < 0 or y > len(self.chars):
-            raise BearException('Region outside loader boundaries')
+            raise BearResourceException('Region outside loader boundaries')
         if x + xsize > len(self.chars[0]) or y + ysize > len(self.chars):
-            raise BearException('Region too huge')
+            raise BearResourceException('Region outside loader boundaries')
         ch = []
         co = []
         for y_offset in range(ysize):
@@ -94,7 +96,7 @@ class TxtLoader(ASCIILoader):
         for line in open(self.filename):
             f = list(line.rstrip('\n'))
             if self.chars and len(f) != len(self.chars[0]):
-                raise BearException('All lines should be equal length')
+                raise BearResourceException('All lines in the ASCII art TXT file should be equal length')
             if not self.chars:
                 self.chars = [f]
             else:
@@ -235,7 +237,7 @@ class XpLoader(ASCIILoader):
         if not self.layers:
             self._process_xp_file()
         if layer >= self.layer_count:
-            raise BearException('Nonexistent layer in XpLoader')
+            raise BearResourceException('Addressing nonexistent layer in XpLoader')
         return deepcopy(self.layers[layer][0]), deepcopy(self.layers[layer][1])
     
     def get_layer_region(self, layer, x, y, xsize, ysize):
@@ -257,7 +259,7 @@ class XpLoader(ASCIILoader):
         if not self.layers:
             self._process_xp_file()
         if layer >= self.layer_count:
-            raise BearException('Nonexistent layer in XpLoader')
+            raise BearResourceException('Adressing nonexistent layer in XpLoader')
         # Shamelessly copypasted from ASCIILoader.get_image_region
         ch = []
         co = []
@@ -439,7 +441,8 @@ class Atlas:
     keys, if any, are ignored. The purpose of this is, basically, to be able to
     address image regions by a human-readable name, so coordinates and sizes
     should describe valid regions in the loader. A single region may be
-    called by multiple names, but not the other way around.
+    called by multiple names, but not the other way around. Other values for the
+    elements, if any, are ignored.
 
     :param loader: a Loader instance.
 
@@ -447,7 +450,9 @@ class Atlas:
     """
     def __init__(self, loader, json_file):
         self.loader = loader
-        # A dict of {name: (x, y, xsize, ysize)}
+        # In case source file needs to be checked later, like to make sure 2
+        # atlases are not the same
+        self.source = json_file
         self.elements = {}
         for item in json.load(open(json_file)):
             self.elements[item['name']] = (item['x'], item['y'],
