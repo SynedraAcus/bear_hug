@@ -237,32 +237,39 @@ class ScrollableECSLayout(Layout):
         `view_size[0]` long are set as `chars` and `colors`.
         :return:
         """
+        # TODO: move Z-level-aware code to ECSLayout
         chars = [[' ' for x in range(self.view_size[0])] \
                  for y in range(self.view_size[1])]
-        colors = copy_shape(chars, None)
+        colors = copy_shape(chars, 'white')
         for line in range(self.view_size[1]):
             for char in range(self.view_size[0]):
+                highest_z = 0
+                col = None
+                c = ' '
                 for child in self._child_pointers[self.view_pos[1] + line] \
-                                     [self.view_pos[0] + char][::-1]:
-                    # Addressing the correct child position
-                    c = child.chars[
-                        self.view_pos[1] + line - self.child_locations[child][
-                            1]] \
-                        [self.view_pos[0] + char - self.child_locations[child][
-                            0]]
-                    if c != ' ':
-                        # Spacebars are used as empty space and are transparent
-                        chars[line][char] = c
-                        break
-                colors[line][char] = \
-                    child.colors[
-                        self.view_pos[1] + line - self.child_locations[child][
-                            1]] \
-                        [self.view_pos[0] + char - self.child_locations[child][
-                        0]]
+                                     [self.view_pos[0] + char][::]:
+                    # Select char and color from lowest widget (one with max y
+                    # for bottom).
+                    # If two widgets are equally low, pick newer one
+                    if child.z_level >= highest_z:
+                        tmp_c = child.chars[
+                            self.view_pos[1] + line - self.child_locations[child][
+                                1]] \
+                            [self.view_pos[0] + char - self.child_locations[child][
+                                0]]
+                        if c != ' ' and tmp_c == ' ':
+                            continue
+                        else:
+                            highest_z = child.z_level
+                            c = tmp_c
+                            col = child.colors[
+                                self.view_pos[1] + line - self.child_locations[child][1]] \
+                                [self.view_pos[0] + char - self.child_locations[child][0]]
+                chars[line][char] = c
+                colors[line][char] = col
         self.chars = chars
         self.colors = colors
-    
+
     def resize_view(self, new_size):
         """
         Currently not implemented.

@@ -349,9 +349,11 @@ class PositionComponent(Component):
     :param vx: Horizontal speed (chars per second)
 
     :param vy: Vertical speed (chars per second)
+
+    :param affect_z: Set Z-level for widgets when placing. Default True
     """
     def __init__(self, dispatcher, x=0, y=0, vx=0, vy=0,
-                 last_move = (1, 0), owner=None):
+                 last_move = (1, 0), affect_z=True, owner=None):
         super().__init__(dispatcher, name='position', owner=owner)
         self._x = x
         self._y = y
@@ -362,6 +364,7 @@ class PositionComponent(Component):
         self.vx = vx
         self.vy = vy
         self.last_move = last_move
+        self.affect_z = affect_z
         if self.dispatcher:
             dispatcher.register_listener(self, 'tick')
 
@@ -416,6 +419,8 @@ class PositionComponent(Component):
         self.last_move = (x - self._x, y - self._y)
         self._x = x
         self._y = y
+        if self.affect_z and hasattr(self.owner, 'widget'):
+            self.owner.widget.widget.z_level = y + self.owner.widget.height
         if emit_event:
             self.dispatcher.add_event(BearEvent(event_type='ecs_move',
                                                 event_value=(self.owner.id,

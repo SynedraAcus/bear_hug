@@ -176,14 +176,17 @@ class Widget:
     :param chars: a 2-nested list of unicode characters
 
     :param colors: a 2-nested list of colors. Anything that is accepted by ``terminal.color()`` goes here (a color name or a 0xAARRGGBB/0xRRGGBB/0xRGB/0xARGB integer are fine, (r, g, b) tuples are unreliable).
+
+    :param z_level: a Z-level to determine objects' overlap. Used by (Scrollable)ECSLayout. Not to be mixed up with a terminal layer, these are two independent systems.
     """
     #TODO: maybe support background colour after all?
     
-    def __init__(self, chars, colors):
+    def __init__(self, chars, colors, z_level=0):
         if not isinstance(chars, list) or not isinstance(colors, list):
             raise BearException('Chars and colors should be lists')
         if not shapes_equal(chars, colors):
             raise BearException('Chars and colors should have the same shape')
+        self.z_level = z_level
         self.chars = chars
         self.colors = colors
         # A widget may want to know about the terminal it's attached to
@@ -1009,7 +1012,7 @@ class Label(Widget):
     """
     
     def __init__(self, text, chars=None, colors=None,
-                 just='left', color='white', width=None, height=None):
+                 just='left', color='white', width=None, height=None, **kwargs):
         # TODO: add input delay to Label
         # If chars and colors are not provided, generate them. If they are,
         # typically from JSON dump, no checks are performed. Thus, in theory
@@ -1019,7 +1022,7 @@ class Label(Widget):
             chars = Label._generate_chars(text, width, height, just)
         if not colors:
             colors = copy_shape(chars, color)
-        super().__init__(chars, colors)
+        super().__init__(chars, colors, **kwargs)
         self.color = color
         # Bypassing setter, because I need to actually create fields
         self._just = just
