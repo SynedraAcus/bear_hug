@@ -298,6 +298,14 @@ class WidgetComponent(Component):
         A (width, height) tuple
         """
         return self.widget.size
+
+    @property
+    def z_level(self):
+        return self.widget.z_level
+
+    @z_level.setter
+    def z_level(self, value):
+        self.widget.z_level = value
     
     def __repr__(self):
         d = {'widget': loads(repr(self.widget)),
