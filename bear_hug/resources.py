@@ -468,3 +468,48 @@ class Atlas:
         :returns: A region (chars, colors)
         """
         return self.loader.get_image_region(*self.elements[name])
+
+
+class Multiatlas:
+    """
+    A class that contains multiple atlases and fetches elements from whichever
+    has the element you need.
+
+    This class supports the `get_element` method similar to Atlas, but does
+    not inherit from it. Consequently, Multiatlas can be created empty and
+    its atlas list can be extended with valid atlases later.
+
+    :param atlases: an iterable of Atlas instances
+    """
+    def __init__(self, atlases):
+        self.atlases = []
+        for atlas in atlases:
+            self.add_atlas(atlas)
+
+    def add_atlas(self, atlas):
+        """
+        Add an atlas to the multiatlas
+
+        Checks whether an atlas is valid and has any names shared with other
+        atlases. If so, throws an exception
+        :param atlas:
+        :return:
+        """
+        if not isinstance(atlas, Atlas):
+            raise TypeError(f'{type(atlas)} used as an atlas for multiatlas')
+        for other_atlas in self.atlases:
+            if atlas.source == other_atlas.source:
+                raise BearResourceException(f'Attempting to add atlas {atlas.source} to multiatlas twice')
+            for key in atlas.elements:
+                if key in other_atlas.elements:
+                    raise BearResourceException(f'Name {key} is used by two different atlases')
+        self.atlases.append(atlas)
+
+    def get_element(self, name):
+        # See which atlas contains this element. A bit slow-ish, but it's
+        # unlikely there would be more then ten or so atlases
+        for atlas in self.atlases:
+            if name in atlas.elements:
+                return atlas.get_element(name)
+        # Exhausted atlas list, not found anything
+        raise BearResourceException(f'Requesting invalid name {name} from multiatlas')
