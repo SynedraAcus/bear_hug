@@ -146,6 +146,49 @@ def blit(l1, l2, x, y):
     return r
 
 
+def generate_box(size, line_width='single'):
+    """
+    Generate a chars list for a box bounded by pseudographic lines.
+
+    Uses CP437 chars 0xB3-0xDA translated to Unicode points (see
+    `here<http://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/PC/CP437.TXT>`_
+    for the translation table)
+
+    :param size: an (xsize, ysize) tuple
+
+    :param line_width: str. Either 'single' or 'double'
+
+    :return: a nested list of chars.
+    """
+    if size[0] < 2 or size[1] < 2:
+        raise BearException('Box size should be at least 2 by 2 chars')
+    chars = [[' ' for x in range(size[0])] for y in range(size[1])]
+    if line_width == 'single':
+        chars[0][0] = '\u250c'
+        chars[0][-1] = '\u2510'
+        chars[-1][0] = '\u2514'
+        chars[-1][-1] = '\u2518'
+        for x in range(len(chars[0])-2):
+            chars[0][x+1] = '\u2500'
+            chars[-1][x+1] = '\u2500'
+        for y in range(len(chars)-2):
+            chars[y+1][0] = '\u2502'
+            chars[y+1][-1] = '\u2502'
+        return chars
+    elif line_width == 'double':
+        chars[0][0] = '\u2554'
+        chars[0][-1] = '\u2557'
+        chars[-1][0] = '\u255a'
+        chars[-1][-1] = '\u255d'
+        for x in range(len(chars[0]) - 2):
+            chars[0][x + 1] = '\u2550'
+            chars[-1][x + 1] = '\u2550'
+        for y in range(len(chars) - 2):
+            chars[y + 1][0] = '\u2551'
+            chars[y + 1][-1] = '\u2551'
+        return chars
+    raise BearException('Line width should be either single or double')
+
 #  Exceptions were moved here to avoid circular imports
 class BearException(Exception):
     """

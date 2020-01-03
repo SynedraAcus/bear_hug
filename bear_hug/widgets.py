@@ -521,6 +521,7 @@ class Layout(Widget):
         """
         Redraw itself on every tick
         """
+        # TODO: self._needs_update
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
             if isinstance(self.parent, BearTerminal):
@@ -538,7 +539,24 @@ class Layout(Widget):
         """
         self_pos = self.terminal.widget_locations(self).pos
         return self_pos[0]+relative_pos[0], self_pos[1]+relative_pos[1]
-    
+
+    def get_child_on_pos(self, pos, return_bg=False):
+        """
+        Return the newest child on a given position.
+
+        :param pos: Position in Layout coordinates
+
+        :param return_bg: If True, return background widget when clicking outside any children. If False, return None in this case. Defaults to False
+
+        :return: Widget instance or None
+        """
+        if len(self._child_pointers[pos[1]][pos[0]]) > 1:
+            return self._child_pointers[pos[1]][pos[0]][-1]
+        if return_bg:
+            return self.background
+        else:
+            return None
+
     def __repr__(self):
         raise BearException('Layout does not support __repr__ serialization')
 
