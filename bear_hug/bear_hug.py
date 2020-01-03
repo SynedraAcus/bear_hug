@@ -15,6 +15,9 @@ from copy import copy
 from collections import namedtuple
 
 
+WidgetLocation = namedtuple('WidgetLocation', ('pos', 'layer'))
+
+
 class BearTerminal:
     """
     A main terminal class.
@@ -514,12 +517,3 @@ class BearLoop:
         
     
 #  Misc classes
-
-class WidgetLocation:
-    """
-    Data class with position and layer of a Widget
-    """
-    __slots__ = 'pos', 'layer'
-    def __init__(self, pos, layer):
-        self.pos = pos
-        self.layer = layer

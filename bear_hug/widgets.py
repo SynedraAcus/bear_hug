@@ -521,7 +521,6 @@ class Layout(Widget):
         """
         Redraw itself on every tick
         """
-        # TODO: self._needs_update
         if event.event_type == 'service' and event.event_value == 'tick_over':
             self._rebuild_self()
             if isinstance(self.parent, BearTerminal):
