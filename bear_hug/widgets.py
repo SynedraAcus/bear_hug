@@ -5,12 +5,6 @@ for simpler games and apps. However, for the sake of clearer architecture,
 entities are recommended.
 """
 
-# TODO: rebuild JSON serialization system to avoid dumping Widgets altogether
-# This is essentially mixing up model and view, which is generally bad. However,
-# it has marginal benefits (for dumping procedurally generated and/or edited
-# widgets within entities). Although actually it exists mostly because I want a
-# functional dumping system right now, and disentangling them would make
-# WidgetComponent serializer a huge mess.
 
 import inspect
 
@@ -36,10 +30,6 @@ def deserialize_widget(serial, atlas=None):
     :returns: a Widget instance
     """
 
-    # TODO: support getting chars and colors for deserialization from atlas
-    # In animation, it is achieved by storing source IDs in __init__. Not
-    # certain if it'd be safe for Widgets with all their complexity
-    
     if isinstance(serial, str):
         d = loads(serial)
     elif isinstance(serial, dict):
@@ -388,6 +378,7 @@ class Layout(Widget):
         # case someone wants to add background later
         w = Widget(self.chars, self.colors)
         self.add_child(w, pos=(0, 0))
+        self.need_redraw = False
     
     @property
     def terminal(self):
@@ -503,17 +494,27 @@ class Layout(Widget):
         colors = copy_shape(self.colors, None)
         for line in range(len(chars)):
             for char in range(len(chars[0])):
-                for child in self._child_pointers[line][char][::-1]:
-                    # Addressing the correct child position
-                    c = child.chars[line-self.child_locations[child][1]] \
-                        [char - self.child_locations[child][0]]
-                    if c != ' ':
-                        # Spacebars are used as empty space and are transparent
-                        chars[line][char] = c
-                        break
-                colors[line][char] = \
-                    child.colors[line - self.child_locations[child][1]] \
-                    [char - self.child_locations[child][0]]
+                highest_z = 0
+                col = None
+                c = ' '
+                for child in self._child_pointers[line][char][::]:
+                    # Select char and color from lowest widget (one with max y
+                    # for bottom).
+                    # If two widgets are equally low, pick newer one
+                    if child.z_level >= highest_z:
+                        tmp_c = child.chars \
+                            [line - self.child_locations[child][1]] \
+                            [char - self.child_locations[child][0]]
+                        if c != ' ' and tmp_c == ' ':
+                            continue
+                        else:
+                            highest_z = child.z_level
+                            c = tmp_c
+                            col = child.colors \
+                                [line - self.child_locations[child][1]] \
+                                [char - self.child_locations[child][0]]
+                chars[line][char] = c
+                colors[line][char] = col
         self.chars = chars
         self.colors = colors
     

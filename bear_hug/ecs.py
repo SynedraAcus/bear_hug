@@ -198,6 +198,7 @@ class Component(Listener):
 
 # Copypasting SO is the only correct way to program
 # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
+# TODO: move Singleton to bear_utilities?
 class Singleton(type):
     """
     A Singleton metaclass for EntityTracker
@@ -516,7 +517,7 @@ class DestructorComponent(Component):
             if component != self.name:
                 self.dispatcher.unregister_listener(
                     self.owner.__dict__[component])
-    
+
     def on_event(self, event):
         if self.is_destroying and event.event_type == 'service' and event.event_value == 'tick_over':
             # owner.components stores IDs, not component objects themselves.
@@ -528,6 +529,9 @@ class DestructorComponent(Component):
                     self.owner.remove_component(component)
             self.dispatcher.unregister_listener(self)
             self.owner.remove_component(self.name)
+            # Otherwise this component remembers entity and probably blocks GC
+            del self.owner
+            del self
 
     def __repr__(self):
         d = {'class': self.__class__.__name__,
@@ -638,7 +642,7 @@ class PassingComponent(Component):
         # a widget yet, when this component is created. Thus, this hack.
         # Hopefully no one will try and walk into the object before it is shown
         # on screen. Alas, it requires calling a method for a frequently used
-        # property and is generally pretty ugly. Remove this if I ever get to
+        # property. Remove this if I ever get to
         # optimizing and manage to think of something better.
         if self._shadow_size is None:
             self._shadow_size = self.owner.widget.size
@@ -751,7 +755,6 @@ def deserialize_component(serial, dispatcher):
             kwargs[key] = converters[key](d[key])
         elif key == 'widget':
             w = deserialize_widget(d['widget'])
-            #TODO: subscribe widgets to events other than 'tick' in deserialization
             dispatcher.register_listener(w, 'tick')
             kwargs['widget'] = w
         else:

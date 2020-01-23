@@ -75,7 +75,6 @@ class ECSLayout(Layout):
     """
     def __init__(self, chars, colors):
         super().__init__(chars, colors)
-        # TODO: Z-levels in ECSLayout and ScrollableECSLayout
         self.entities = {}
         self.widgets = {}
         self.need_redraw = False
@@ -237,7 +236,6 @@ class ScrollableECSLayout(Layout):
         `view_size[0]` long are set as `chars` and `colors`.
         :return:
         """
-        # TODO: move Z-level-aware code to ECSLayout
         chars = [[' ' for x in range(self.view_size[0])] \
                  for y in range(self.view_size[1])]
         colors = copy_shape(chars, 'white')
