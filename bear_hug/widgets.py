@@ -1015,7 +1015,8 @@ class Label(Widget):
     ``self.text`` the last time.
 
     Unlike text, Label's height and width cannot be changed. Set these to
-    accomodate all possible inputs during Label creation.
+    accomodate all possible inputs during Label creation. If a text is too big
+    to fit into the Label, ValueError is raised.
 
     :param text: string to be displayed
 
@@ -1085,9 +1086,12 @@ class Label(Widget):
 
     @text.setter
     def text(self, value):
-        # TODO: check text size in Label
-        # maybe raise something sensible when `text` is set for something longer
-        # than fits in `chars`.
+        # Checking that text will fit in a label
+        l = value.split('\n')
+        if self.chars and (len(l) > len(self.chars) or
+                           any(len(x) > len(self.chars[0])
+                               for x in l)):
+            raise ValueError('Text doesn\'t fit in a Label')
         if not self._text:
             self._text = value
         chars = copy_shape(self.chars, ' ')
