@@ -54,6 +54,8 @@ class SoundListener(Listener):
                 raise BearSoundException(
                     'Sound should be either WaveObject or string')
         self.sounds = sounds
+        self.bg_sound = None
+        self.bg_buffer = None
         
     def register_sound(self, sound, sound_name):
         """
@@ -86,8 +88,19 @@ class SoundListener(Listener):
         if sound_name not in self.sounds:
             raise BearSoundException(
                 f'Nonexistent sound {sound_name} requested')
-        self.sounds[sound_name].play()
+        return self.sounds[sound_name].play()
     
     def on_event(self, event):
         if event.event_type == 'play_sound':
             self.play_sound(event.event_value)
+        elif event.event_type == 'set_bg_sound':
+            self.bg_sound = event.event_value
+            if self.bg_sound:
+                self.bg_buffer = self.play_sound(self.bg_sound)
+            else:
+                if self.bg_buffer:
+                    self.bg_buffer.stop()
+                    self.bg_buffer = None
+        elif event.event_type == 'tick' and self.bg_sound:
+            if not self.bg_buffer.is_playing():
+                self.bg_buffer = self.play_sound(self.bg_sound)
