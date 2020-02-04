@@ -8,6 +8,7 @@ API is probably gonna remain backwards-compatible.
 """
 
 from bear_hug.bear_utilities import BearSoundException
+from bear_hug.ecs import Singleton
 from bear_hug.widgets import Listener
 
 import simpleaudio as sa
@@ -19,7 +20,7 @@ import wave
 # be switched on the fly.
 
 
-class SoundListener(Listener):
+class SoundListener(Listener, metaclass=Singleton):
     """
     It doesn't listen to sounds. It listens to the *events* and plays sounds.
     
