@@ -576,8 +576,21 @@ class WalkerCollisionComponent(CollisionComponent):
     Expects both entities involved to have a PositionComponent and a
     PassabilityComponent.
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Prevents the infinite cycle of movement-collision-return-collision...
+        # when moving within impassable area
+        self.collided_this_tick = False
+        self.dispatcher.register_listener(self, 'tick')
+
+    def on_event(self, event):
+        if event.event_type == 'tick' and self.collided_this_tick:
+            self.collided_this_tick = False
+        return super().on_event(event)
 
     def collided_into(self, entity):
+        if self.collided_this_tick:
+            return
         if entity is not None:
             try:
                 other = EntityTracker().entities[entity]
@@ -603,11 +616,13 @@ class WalkerCollisionComponent(CollisionComponent):
                     # this move never happened and other components may rely on
                     # it
                     self.owner.position.last_move = tmp_move
+                    self.collided_this_tick = True
         else:
             # Processing collisions with screen edges without involving passability
             self.owner.position.relative_move(
                 self.owner.position.last_move[0] * -1,
                 self.owner.position.last_move[1] * -1)
+            self.collided_this_tick = True
 
 
 class PassingComponent(Component):
