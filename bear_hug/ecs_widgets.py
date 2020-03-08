@@ -118,6 +118,11 @@ class ECSLayout(Layout):
         r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
+            if entity_id not in self.entities:
+                # Silently ignore attempts to move nonexistent children
+                # Some entities may not be shown right now, but still have a
+                # PositionComponent that moves and emits events
+                return
             # Checking if collision events need to be emitted
             # Check for collisions with border
             if x < 0 or x + self.entities[entity_id].widget.size[0]\
@@ -351,18 +356,27 @@ class ScrollableECSLayout(Layout):
         r = []
         if event.event_type == 'ecs_move':
             entity_id, x, y = event.event_value
+            if entity_id not in self.entities or entity_id not in self.widgets:
+                # Silently ignore attempts to move nonexistent children
+                # Some entities may not be shown right now, but still have a
+                # PositionComponent that moves and emits events
+                print(entity_id)
+                return
             # Checking if collision events need to be emitted
             # Check for collisions with border
             try:
-                if x < 0 or x + self.entities[entity_id].widget.size[0] \
+                if x < 0 or x + self.widgets[entity_id].width \
                         > len(self._child_pointers[0]) or y < 0 or \
-                        y + self.entities[entity_id].widget.size[1] > len(
+                        y + self.widgets[entity_id].height > len(
                         self._child_pointers):
                     r.append(BearEvent(event_type='ecs_collision',
                                        event_value=(entity_id, None)))
                 else:
                     # Apparently no collision with a border, can safely move
-                    self.move_child(self.widgets[entity_id], (x, y))
+                    try:
+                        self.move_child(self.widgets[entity_id], (x, y))
+                    except:
+                        pass
                     self.need_redraw = True
                     collided = set()
                     for y_offset in range(
