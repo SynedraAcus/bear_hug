@@ -543,16 +543,62 @@ class CollisionComponent(Component):
     """
     A component responsible for processing collisions of this object.
 
+    Stores the following data:
+
+    ``depth``: Int, a number of additional Z-levels over which collision is possible.
+    Additional collisions are detected on lower Z-levels, ie the level where the
+    object is displayed is always considered to be the front. Defaults to 0,
+    ie collides only to the objects within its own Z-level.
+
+    ``z_shift``: A 2-tuple of ints. Every next Z-level is offset from the
+    previous one by this much, to create perspective. Defaults to (0, 0), ie no
+    offset.
+
+    ``face_position``: A tuple of ints describing upper left corner of the
+    collidable part of the entity on the top Z-level. Defaults to (0, 0), ie the
+    upper left corner of the widget is where the hitbox begins. This is a
+    suitable default for flat items, but not for something drawn in perspective.
+
+    ``face_size``: A tuple of ints describing the size of the collidable part
+    of the entity on the top Z-level. If set to (0, 0), entire entity widget is
+    considered collidable. Defaults to (0, 0). There is no method for making
+    uncollidable entities via setting zero face size; for that, just create your
+    entities without any CollisionComponent at all.
+
+    ``passable``: whether collisions with this item should be blocking. This
+    class by itself does nothing with this knowledge, but child classes may
+    need it to make distinction between collisions where further movement is
+    impossible (eg walls) and collisions that should be detected, but do
+    not prevent movement (eg walking through fire). Defaults to False, ie
+    blocking collision.
+
     This is a base class, so its event processing just calls
     ``self.collided_into(other_entity)`` when owner moves into something, and
     ``self.collided_by(other_entity)`` when something else moves into the owner.
-    Actual collision processing logic should be provided by subclasses by
-    overriding these two methods.
+    Both methods do nothing by themselves;actual collision processing logic
+    should be provided by subclasses.
+
+    Creating entities with the CollisionComponent but without either
+    PositionComponent or WidgetComponent is just asking for trouble.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, depth=0, z_shift=(0, 0),
+                 face_position=(0, 0), face_size=(0, 0),
+                 passable=False, **kwargs):
         super().__init__(*args, name='collision', **kwargs)
         self.dispatcher.register_listener(self, 'ecs_collision')
+        self.depth = depth
+        self.passable = passable
+        if len(z_shift) != 2 or not all(isinstance(x, int) for x in z_shift):
+            raise BearECSException('z_shift for a CollisionComponent should be a tuple of 2 ints')
+        self.z_shift = z_shift
+        if len(face_position) != 2 or not all(isinstance(x, int) for x in face_position):
+            raise BearECSException(
+                'face_position for a CollisionComponent should be a tuple of 2 ints')
+        self.face_position = face_position
+        if len(face_size) != 2 or not all(isinstance(x, int) for x in face_size):
+            raise BearECSException('z_shift for a CollisionComponent should be a tuple of 2 ints')
+        self.face_size = face_size
 
     def on_event(self, event):
         if event.event_type == 'ecs_collision':
@@ -710,6 +756,52 @@ class DecayComponent(Component):
                       'destroy_condition': self.destroy_condition,
                       'lifetime': self.lifetime,
                       'age': self.age})
+
+
+class CollisionListener(Listener):
+    """
+    A listener responsible for detecting collision
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.entities = {}
+        self.currently_tracked = set()
+
+
+    def on_event(self, event):
+        if event.event_type == 'ecs_create':
+            entity = event.event_value
+            # if hasattr(entity, 'position') and hasattr(entity, 'collision'):
+            self.entities[entity.id] = entity
+        elif event.event_type == 'ecs_destroy':
+            del(self.entities[event.event_value])
+            if event.event_value in self.currently_tracked:
+                self.currently_tracked.remove(event.event_value)
+        elif event.event_type == 'ecs_remove':
+            if event.event_value in self.currently_tracked:
+                self.currently_tracked.remove(event.event_value)
+        elif event.event_type == 'ecs_add':
+            # Anything added to the screen should have position and widget
+            # But if it doesn't have CollisionComponent, it's not our problem
+            if hasattr(self.entities[event.event_value[0]], 'collision'):
+                self.currently_tracked.add(event.event_value[0])
+        elif event.event_type == 'ecs_move' \
+                and event.event_value[0] in self.currently_tracked:
+            # Only process collisions between entities; if a collision into the
+            # screen edge happens, it's the ECSLayout job to detect it
+            moved_id, x, y = event.event_value
+            moved_size = self.entities[moved_id].widget.size
+            r = []
+            for other_id in self.currently_tracked:
+                # Z-unaware for now
+                other = self.entities[other_id]
+                if other_id == moved_id or not hasattr(other, 'position') \
+                        or not hasattr(other, 'collision'):
+                    continue
+                if rectangles_collide((x, y), moved_size, other.position.pos,
+                    other.widget.size):
+                    r.append(BearEvent('ecs_collision', (moved_id, other_id)))
+            return r
 
 
 def deserialize_component(serial, dispatcher):
