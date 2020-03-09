@@ -643,26 +643,27 @@ class WalkerCollisionComponent(CollisionComponent):
             except KeyError:
                 # Silently pass collisions into nonexistent entities
                 return
-            if 'passability' in self.owner.__dict__ and 'passability' in other.__dict__:
-                if rectangles_collide((self.owner.position.x +
-                                       self.owner.passability.shadow_pos[0],
-                                       self.owner.position.y +
-                                       self.owner.passability.shadow_pos[1]),
-                                      self.owner.passability.shadow_size,
-                                      (other.position.x +
-                                       other.passability.shadow_pos[0],
-                                       other.position.y +
-                                       other.passability.shadow_pos[1]),
-                                      other.passability.shadow_size):
-                    tmp_move = self.owner.position.last_move
-                    self.owner.position.relative_move(
-                        self.owner.position.last_move[0] * -1,
-                        self.owner.position.last_move[1] * -1)
-                    # Do not change last_move after collision. We pretend that
-                    # this move never happened and other components may rely on
-                    # it
-                    self.owner.position.last_move = tmp_move
-                    self.collided_this_tick = True
+            # if 'passability' in self.owner.__dict__ and 'passability' in other.__dict__:
+            #     if rectangles_collide((self.owner.position.x +
+            #                            self.owner.passability.shadow_pos[0],
+            #                            self.owner.position.y +
+            #                            self.owner.passability.shadow_pos[1]),
+            #                           self.owner.passability.shadow_size,
+            #                           (other.position.x +
+            #                            other.passability.shadow_pos[0],
+            #                            other.position.y +
+            #                            other.passability.shadow_pos[1]),
+            #                           other.passability.shadow_size):
+            if hasattr(other, 'collision') and not other.collision.passable:
+                tmp_move = self.owner.position.last_move
+                self.owner.position.relative_move(
+                    self.owner.position.last_move[0] * -1,
+                    self.owner.position.last_move[1] * -1)
+                # Do not change last_move after collision. We pretend that
+                # this move never happened and other components may rely on
+                # it
+                self.owner.position.last_move = tmp_move
+                self.collided_this_tick = True
         else:
             # Processing collisions with screen edges without involving passability
             self.owner.position.relative_move(
@@ -790,17 +791,41 @@ class CollisionListener(Listener):
             # Only process collisions between entities; if a collision into the
             # screen edge happens, it's the ECSLayout job to detect it
             moved_id, x, y = event.event_value
-            moved_size = self.entities[moved_id].widget.size
+            moved_z = self.entities[moved_id].widget.z_level
+            moved_depth = self.entities[moved_id].collision.depth
+            moved_face = self.entities[moved_id].collision.face_position
+            moved_face_size = self.entities[moved_id].collision.face_size
+            moved_shift = self.entities[moved_id].collision.z_shift
+            if moved_face_size == (0, 0):
+                moved_face_size = self.entities[moved_id].widget.size
             r = []
             for other_id in self.currently_tracked:
-                # Z-unaware for now
                 other = self.entities[other_id]
                 if other_id == moved_id or not hasattr(other, 'position') \
                         or not hasattr(other, 'collision'):
                     continue
-                if rectangles_collide((x, y), moved_size, other.position.pos,
-                    other.widget.size):
-                    r.append(BearEvent('ecs_collision', (moved_id, other_id)))
+                other_z = other.widget.z_level
+                other_depth = other.collision.depth
+                other_shift = other.collision.z_shift
+                if moved_z - moved_depth <= other_z and \
+                        other_z - other_depth <= moved_z:
+                    # Only check if two entities are within collidable z-levels
+                    other_face = other.collision.face_position
+                    other_face_size = other.collision.face_size
+                    if other_face_size == (0, 0):
+                        other_face_size = other.widget.size
+                    z_range = (max(moved_z - moved_depth, other_z - other_depth),
+                               min(moved_z, other_z))
+                    for z_level in range(z_range[0], z_range[1] + 1):
+                        moved_pos = (x + moved_face[0] + moved_shift[0]*(moved_z - z_level),
+                                     y + moved_face[1] + moved_shift[1]*(moved_z - z_level))
+                        other_pos = (other.position.x + other_face[0] + other_shift[0]*(other_z - z_level),
+                                     other.position.y + other_face[1] + other_shift[1]*(other_z - z_level))
+                        if rectangles_collide(moved_pos, moved_face_size,
+                                              other_pos, other_face_size):
+                            r.append(BearEvent('ecs_collision',
+                                               (moved_id, other_id)))
+                            continue
             return r
 
 

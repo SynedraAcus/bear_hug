@@ -134,21 +134,21 @@ class ECSLayout(Layout):
                 # Apparently no collision with a border, can safely move
                 self.move_child(self.widgets[entity_id], (x, y))
                 self.need_redraw = True
-                collided = set()
-                for y_offset in range(self.entities[entity_id].widget.size[1]):
-                    for x_offset in range(self.entities[entity_id].widget.size[0]):
-                        for other_widget in self._child_pointers[y+y_offset] \
-                            [x+x_offset]:
-                            # Child_pointers is ECS-agnostic and stores pointers
-                            # to the actual widgets
-                                collided.add(other_widget)
-                collided_ent_ids = set()
-                for child in self.entities:
-                    if child != entity_id and \
-                            self.entities[child].widget.widget in collided:
-                        collided_ent_ids.add(child)
-                for child in collided_ent_ids:
-                    r.append(BearEvent('ecs_collision', (entity_id, child)))
+                # collided = set()
+                # for y_offset in range(self.entities[entity_id].widget.size[1]):
+                #     for x_offset in range(self.entities[entity_id].widget.size[0]):
+                #         for other_widget in self._child_pointers[y+y_offset] \
+                #             [x+x_offset]:
+                #             # Child_pointers is ECS-agnostic and stores pointers
+                #             # to the actual widgets
+                #                 collided.add(other_widget)
+                # collided_ent_ids = set()
+                # for child in self.entities:
+                #     if child != entity_id and \
+                #             self.entities[child].widget.widget in collided:
+                #         collided_ent_ids.add(child)
+                # for child in collided_ent_ids:
+                #     r.append(BearEvent('ecs_collision', (entity_id, child)))
         elif event.event_type == 'ecs_create':
             self.add_entity(event.event_value)
             self.need_redraw = True
