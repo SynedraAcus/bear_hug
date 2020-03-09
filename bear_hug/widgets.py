@@ -875,12 +875,12 @@ class SimpleAnimationWidget(Widget):
     :param emit_ecs: If True, emit ecs_update events on every frame. Useless for widgets outside ECS, but those on ``ECSLayout`` are not redrawn unless this event is emitted or something else causes ECSLayout to redraw.
     """
     
-    def __init__(self, animation, emit_ecs=True):
+    def __init__(self, animation, *args, emit_ecs=True, **kwargs):
         if not isinstance(animation, Animation):
             raise BearException(
                 'Only Animation instance can be used in SimpleAnimationWidget')
         self.animation = animation
-        super().__init__(*animation.frames[0])
+        super().__init__(*animation.frames[0], *args, **kwargs)
         self.running_index = 0
         self.have_waited = 0
         self.emit_ecs = emit_ecs
