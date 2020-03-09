@@ -672,51 +672,6 @@ class WalkerCollisionComponent(CollisionComponent):
             self.collided_this_tick = True
 
 
-class PassingComponent(Component):
-    """
-    A component responsible for knowing whether or not items can be walked
-    through.
-
-    Unlike collisions of eg projectiles, walkers can easily collide with screen
-    items and each other provided they are "behind" or "ahead" of each other. To
-    check for that, PassingComponent stores a so-called shadow (basically the
-    projection on the surface, something like lowest three rows for a
-    human-sized object). Then, WalkerCollisionComponent uses those to define
-    if walk attempt was legal.
-
-    All entities that do not have this component are assumed to be passable.
-
-    :param shadow_pos: 2-tuple of ints, a position of a shadow relative to ``owner.position.pos``
-
-    :param shadow_size: 2-tuple of ints, (xsize, ysize) of the shadow
-    """
-
-    def __init__(self, *args, shadow_pos=(0, 0), shadow_size=None, **kwargs):
-        super().__init__(*args, name='passability', **kwargs)
-        self.shadow_pos = shadow_pos
-        self._shadow_size = shadow_size
-
-    @property
-    def shadow_size(self):
-        # TODO: remove the ugly shadow size hack
-        # The idea is that shadow size can be set to owner's widget size by
-        # default. The only issue is that owner may not be set, or may not have
-        # a widget yet, when this component is created. Thus, this hack.
-        # Hopefully no one will try and walk into the object before it is shown
-        # on screen. Alas, it requires calling a method for a frequently used
-        # property. Remove this if I ever get to
-        # optimizing and manage to think of something better.
-        if self._shadow_size is None:
-            self._shadow_size = self.owner.widget.size
-        return self._shadow_size
-
-    def __repr__(self):
-        d = {'class': self.__class__.__name__,
-             'shadow_size': self._shadow_size,
-             'shadow_pos': self.shadow_pos}
-        return dumps(d)
-
-
 class DecayComponent(Component):
     """
     Attaches to an entity and destroys it when conditions are met.
@@ -768,7 +723,6 @@ class CollisionListener(Listener):
         self.entities = {}
         self.currently_tracked = set()
 
-
     def on_event(self, event):
         if event.event_type == 'ecs_create':
             entity = event.event_value
@@ -786,6 +740,7 @@ class CollisionListener(Listener):
             # But if it doesn't have CollisionComponent, it's not our problem
             if hasattr(self.entities[event.event_value[0]], 'collision'):
                 self.currently_tracked.add(event.event_value[0])
+            print(self.currently_tracked)
         elif event.event_type == 'ecs_move' \
                 and event.event_value[0] in self.currently_tracked:
             # Only process collisions between entities; if a collision into the
