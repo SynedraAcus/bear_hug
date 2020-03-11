@@ -9,6 +9,7 @@ from bear_hug.event import BearEvent
 from bear_hug.widgets import Layout
 
 
+# TODO: Make sure ECSLayout supports all the stuff from ScrollableECSLayout
 class ECSLayout(Layout):
     """
     A Layout of entities.
@@ -230,6 +231,7 @@ class ScrollableECSLayout(Layout):
             raise BearLayoutException('Invalid view field size')
         self.entities = {}
         self.widgets = {}
+        self.widget_to_entity = {} # A dict from id(widget) to entity
         self.view_pos = view_pos[:]
         self.view_size = view_size[:]
         self._rebuild_self()
@@ -251,19 +253,33 @@ class ScrollableECSLayout(Layout):
                 c = ' '
                 for child in self._child_pointers[self.view_pos[1] + line] \
                                      [self.view_pos[0] + char][::]:
-                    # Select char and color from lowest widget (one with max y
-                    # for bottom).
-                    # If two widgets are equally low, pick newer one
-                    if child.z_level >= highest_z:
+                    # Select char and color the widget with highest Z-level.
+                    # If two widgets are equally Z-high, pick newer one.
+                    child_z = child.z_level
+                    if id(child) in self.widget_to_entity and hasattr(self.widget_to_entity[id(child)], 'collision') and self.widget_to_entity[id(child)].collision.face_size != (0, 0):
+                        # Checking that the child belongs to the entity and that
+                        # this entity has CollisionComponent. with face. If so,
+                        # Z-levels are corrected to account for depth
+                        child_entity = self.widget_to_entity[id(child)]
+                        c_x = self.view_pos[0] + char - self.child_locations[child][0]
+                        c_y = self.view_pos[1] + line - self.child_locations[child][1]
+                        if not (child_entity.collision.face_position[0] <= c_x <= child_entity.collision.face_position[0] + child_entity.collision.face_size[0]) or \
+                                not (child_entity.collision.face_position[1] <= c_y <= child_entity.collision.face_position[1] + child_entity.collision.face_size[1]):
+                            # Outside child's face, Z correction applies
+                            # TODO: do not assume z_shift=(1, -1)
+                            y_offset = child_entity.collision.face_position[1] - c_y
+                            x_offset = c_x - (child_entity.collision.face_position[0]+child_entity.collision.face_size[0])
+                            child_z -= max(x_offset, y_offset)
+                    if child_z >= highest_z:
                         tmp_c = child.chars[
                             self.view_pos[1] + line - self.child_locations[child][
                                 1]] \
                             [self.view_pos[0] + char - self.child_locations[child][
                                 0]]
-                        if c != ' ' and tmp_c == ' ':
+                        if tmp_c in (' ', None):
                             continue
                         else:
-                            highest_z = child.z_level
+                            highest_z = child_z
                             c = tmp_c
                             col = child.colors[
                                 self.view_pos[1] + line - self.child_locations[child][1]] \
@@ -322,6 +338,7 @@ class ScrollableECSLayout(Layout):
             raise BearECSException('Cannot add non-Entity to ECSLayout')
         self.entities[entity.id] = entity
         self.widgets[entity.id] = entity.widget.widget
+        self.widget_to_entity[id(entity.widget.widget)] = entity
 
     def remove_entity(self, entity_id):
         """
@@ -339,6 +356,7 @@ class ScrollableECSLayout(Layout):
                 format(entity_id))
         try:
             self.remove_child(self.entities[entity_id].widget.widget)
+            del self.widget_to_entity[id(self.entities[entity_id].widget.widget)]
         except BearLayoutException:
             # Silently ignore any attempt to remove entities which weren't ever
             # actually placed on the layout (such as eg hands which were never
@@ -378,6 +396,11 @@ class ScrollableECSLayout(Layout):
                     except:
                         pass
                     self.need_redraw = True
+                ################################################################
+                # Old collision code. Currently replaced with
+                # ecs.CollisionListener, but retained just in case
+                ################################################################
+                #
                 #     collided = set()
                 #     for y_offset in range(
                 #             self.entities[entity_id].widget.size[1]):
