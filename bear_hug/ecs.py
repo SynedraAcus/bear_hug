@@ -740,7 +740,6 @@ class CollisionListener(Listener):
             # But if it doesn't have CollisionComponent, it's not our problem
             if hasattr(self.entities[event.event_value[0]], 'collision'):
                 self.currently_tracked.add(event.event_value[0])
-            print(self.currently_tracked)
         elif event.event_type == 'ecs_move' \
                 and event.event_value[0] in self.currently_tracked:
             # Only process collisions between entities; if a collision into the
