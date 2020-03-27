@@ -229,3 +229,12 @@ class BearEventDispatcher:
                     else:
                         raise BearLoopException('on_event returns something ' +
                                                 'other than BearEvent')
+
+    def dump_queue(self):
+        """
+        Remove all events from queue without sending them to their recipients
+
+        :return:
+        """
+        while len(self.deque) > 0:
+            self.deque.pop()
