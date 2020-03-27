@@ -95,12 +95,15 @@ class SoundListener(Listener, metaclass=Singleton):
         if event.event_type == 'play_sound':
             self.play_sound(event.event_value)
         elif event.event_type == 'set_bg_sound':
-            if self.bg_buffer:
-                self.bg_buffer.stop()
             if event.event_value:
-                self.bg_sound = event.event_value
-                self.bg_buffer = self.play_sound(self.bg_sound)
+                if self.bg_sound != event.event_value:
+                    self.bg_sound = event.event_value
+                    if self.bg_buffer:
+                        self.bg_buffer.stop()
+                    self.bg_buffer = self.play_sound(self.bg_sound)
             else:
+                if self.bg_buffer:
+                    self.bg_buffer.stop()
                 self.bg_buffer = None
                 self.bg_sound = None
         elif event.event_type == 'tick' and self.bg_sound:
