@@ -251,6 +251,9 @@ class ScrollableECSLayout(Layout):
                 highest_z = 0
                 col = None
                 c = ' '
+                # TODO: keep child_pointers sorted by Z-level
+                # That way, we can pick the highest child instead of checking
+                # for each goddamn character
                 for child in self._child_pointers[self.view_pos[1] + line] \
                                      [self.view_pos[0] + char][::]:
                     # Select char and color the widget with highest Z-level.
@@ -412,7 +415,6 @@ class ScrollableECSLayout(Layout):
                 #                 # Child_pointers is ECS-agnostic and stores pointers
                 #                 # to the actual widgets
                 #                 collided.add(other_widget)
-                #     # TODO: optimize to avoid checking all entities in collision detector
                 #     # Probably just storing all entity ids along with child pointers
                 #     collided_ent_ids = set()
                 #     for child in self.entities:

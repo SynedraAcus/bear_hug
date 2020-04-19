@@ -767,7 +767,9 @@ class CollisionListener(Listener):
                     other_face = other.collision.face_position
                     other_face_size = other.collision.face_size
                     if other_face_size == (0, 0):
-                        other_face_size = other.widget.size
+                        # The interaction is unclean, but it prevents running
+                        # through this check every time something moves
+                        other.collision.face_size = other.widget.size
                     z_range = (max(moved_z - moved_depth, other_z - other_depth),
                                min(moved_z, other_z))
                     for z_level in range(z_range[0], z_range[1] + 1):
