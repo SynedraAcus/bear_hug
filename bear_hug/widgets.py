@@ -1255,12 +1255,20 @@ class MenuWidget(Layout):
     :param items_pos: A 2-tuple of ints. A position of top-left corner of the 1st MenuItem
 
     :param header: str or None. A menu header. This should not be longer than menu width, otherwise an exception is thrown. Header may look ugly with custom backgrounds, since it's only intended for non-custom menus.
+
+    :param switch_sound: str. A sound which should be played (via ``play_sound`` BearEvent) when a button is highlighted.
+
+    :param activation_sound: str. A sound which should be played (vai ``play_sound`` BearEvent) when a button is pressed
     """
     def __init__(self, dispatcher, terminal=None, items=[], header=None,
                  color='white', items_pos=(2, 2),
-                 background=None, **kwargs):
+                 background=None,
+                 switch_sound=None,
+                 activation_sound=None,
+                 **kwargs):
         self.items = []
-        # Separate from self.heigh and self.width to avoid overwriting attrs
+        self.dispatcher = dispatcher
+        # Separate from self.height and self.width to avoid overwriting attrs
         self.h = 3
         self.w = 4
         self.color = color
@@ -1305,6 +1313,9 @@ class MenuWidget(Layout):
         self.input_delay = 0.2
         self.current_delay = self.input_delay
         self._current_highlight = 0
+        # Storing sounds
+        self.switch_sound = switch_sound
+        self.activation_sound = activation_sound
         self.items[self.current_highlight].highlight()
 
     def _add_item(self, item):
@@ -1337,17 +1348,22 @@ class MenuWidget(Layout):
 
     def on_event(self, event):
         r = None
+        have_switched = False
+        have_activated = False
         if event.event_type == 'tick' and self.current_delay <= self.input_delay:
             self.current_delay += event.event_value
         elif event.event_type == 'key_down' and self.current_delay >= self.input_delay:
             self.current_delay = 0
             if event.event_value in ('TK_SPACE', 'TK_ENTER'):
-                r  = self.items[self.current_highlight].activate()
+                have_activated = True
+                r = self.items[self.current_highlight].activate()
             elif event.event_value in ('TK_UP', 'TK_W') \
                     and self.current_highlight > 0:
+                have_switched = True
                 self.current_highlight -= 1
             elif event.event_value in ('TK_DOWN', 'TK_S') \
                     and self.current_highlight < len(self.items) - 1:
+                have_switched = True
                 self.current_highlight += 1
             elif event.event_value == 'TK_MOUSE_LEFT':
                 if self.terminal:
@@ -1359,6 +1375,7 @@ class MenuWidget(Layout):
                         b = self.get_child_on_pos((mouse_x - x, mouse_y -y))
                         # self.current_highlight = self.items.index(b)
                         if isinstance(b, MenuItem):
+                            have_activated = True
                             r = self.items[self.current_highlight].activate()
         elif event.event_type == 'misc_input' and event.event_value == 'TK_MOUSE_MOVE':
             if self.terminal:
@@ -1370,6 +1387,7 @@ class MenuWidget(Layout):
                     b = self.get_child_on_pos((mouse_x - x, mouse_y - y))
                     # Could be the menu header
                     if isinstance(b, MenuItem):
+                        have_switched = True
                         self.current_highlight = self.items.index(b)
         # Whatever type r was, convert it into a (possibly empty) list of BearEvents
         ret = []
@@ -1384,6 +1402,10 @@ class MenuWidget(Layout):
                         raise TypeError(f'MenuItem action returned {type(e)} instead of a BearEvent')
         else:
             ret = []
+        if self.switch_sound and have_switched:
+            ret.append(BearEvent('play_sound', self.switch_sound))
+        if self.activation_sound and have_activated:
+            ret.append(BearEvent('play_sound', self.activation_sound))
         s = super().on_event(event)
         if s:
             if isinstance(s, BearEvent):
