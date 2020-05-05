@@ -256,7 +256,7 @@ class ScrollableECSLayout(Layout):
                 # for each goddamn character
                 for child in self._child_pointers[self.view_pos[1] + line] \
                                      [self.view_pos[0] + char][::]:
-                    # Select char and color the widget with highest Z-level.
+                    # Select char and color from widget with highest Z-level.
                     # If two widgets are equally Z-high, pick newer one.
                     child_z = child.z_level
                     if id(child) in self.widget_to_entity and hasattr(self.widget_to_entity[id(child)], 'collision') and self.widget_to_entity[id(child)].collision.face_size != (0, 0):
@@ -274,11 +274,17 @@ class ScrollableECSLayout(Layout):
                             x_offset = c_x - (child_entity.collision.face_position[0]+child_entity.collision.face_size[0])
                             child_z -= max(x_offset, y_offset)
                     if child_z >= highest_z:
-                        tmp_c = child.chars[
-                            self.view_pos[1] + line - self.child_locations[child][
-                                1]] \
-                            [self.view_pos[0] + char - self.child_locations[child][
-                                0]]
+                        try:
+                            tmp_c = child.chars[
+                                self.view_pos[1] + line - self.child_locations[child][
+                                    1]] \
+                                [self.view_pos[0] + char - self.child_locations[child][
+                                    0]]
+                        # TODO: Figure out IndexError in scrollableECSLayout
+                        # Crashes with IndexError seemingly out of nowhere in
+                        # the middle of level
+                        except IndexError:
+                            tmp_c = ' '
                         if tmp_c in (' ', None):
                             continue
                         else:
