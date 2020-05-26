@@ -6,7 +6,7 @@ from bear_hug.bear_utilities import BearECSException, BearLayoutException, \
     copy_shape
 from bear_hug.ecs import Entity
 from bear_hug.event import BearEvent
-from bear_hug.widgets import Layout
+from bear_hug.widgets import Layout, Widget
 
 
 # TODO: Make sure ECSLayout supports all the stuff from ScrollableECSLayout
@@ -221,7 +221,12 @@ class ScrollableECSLayout(Layout):
     # inheritance is plain evil.
     def __init__(self, chars, colors,
                  view_pos=(0, 0), view_size=(10, 10)):
+        self.entities = {}
+        self.widgets = {}
+        self.widget_to_entity = {} # A dict from id(widget) to entity
         super().__init__(chars, colors)
+        self.view_pos = view_pos[:]
+        self.view_size = view_size[:]
         if not 0 <= view_pos[0] <= self.width - view_size[0] \
                 or not 0 <= view_pos[1] <= self.height - view_size[1]:
             raise BearLayoutException('Initial viewpoint outside ' +
@@ -229,13 +234,88 @@ class ScrollableECSLayout(Layout):
         if not 0 < view_size[0] <= len(chars[0]) \
                 or not 0 < view_size[1] <= len(chars):
             raise BearLayoutException('Invalid view field size')
-        self.entities = {}
-        self.widgets = {}
-        self.widget_to_entity = {} # A dict from id(widget) to entity
-        self.view_pos = view_pos[:]
-        self.view_size = view_size[:]
+
         self._rebuild_self()
-    
+
+    def add_child(self, child, pos, skip_checks = False):
+        """
+        Add a widget as a child at a given position.
+
+        The child has to be a Widget or a Widget subclass that haven't yet been
+        added to this Layout and whose dimensions are less than or equal to the
+        Layout's. The position is in the Layout coordinates, ie relative to its
+        top left corner.
+
+        :param child: A widget to add.
+
+        :param pos: A widget position, (x, y) 2-tuple
+        """
+        if not isinstance(child, Widget):
+            raise BearLayoutException('Cannot add non-Widget to a Layout')
+        if child in self.children and not skip_checks:
+            raise BearLayoutException('Cannot add the same widget to layout twice')
+        if len(child.chars) > len(self._child_pointers) or \
+                len(child.chars[0]) > len(self._child_pointers[0]):
+            raise BearLayoutException('Cannot add child that is bigger than a Layout')
+        if len(child.chars) + pos[1] > len(self._child_pointers) or \
+                len(child.chars[0]) + pos[0] > len(self._child_pointers[0]):
+            raise BearLayoutException('Child won\'t fit at this position')
+        if child is self:
+            raise BearLayoutException('Cannot add Layout as its own child')
+        if not skip_checks:
+            self.children.append(child)
+        self.child_locations[child] = pos
+        child.terminal = self.terminal
+        child.parent = self
+        for y in range(len(child.chars)):
+            for x in range(len(child.chars[0])):
+                z = child.z_level
+                if id(child) in self.widget_to_entity:
+                    # Checking that the child belongs to the entity and that
+                    # this entity has CollisionComponent. with face. If so,
+                    # Z-levels are corrected to account for depth
+                    child_entity = self.widget_to_entity[id(child)]
+                    if hasattr(child_entity, 'collision') and child_entity.collision.face_size != (0, 0):
+                        if not (child_entity.collision.face_position[0] <= x <=
+                                child_entity.collision.face_position[0] +
+                                child_entity.collision.face_size[0]) or \
+                                not (child_entity.collision.face_position[
+                                         1] <= y <=
+                                     child_entity.collision.face_position[1] +
+                                     child_entity.collision.face_size[1]):
+                            # Outside child's face, Z correction applies
+                            # TODO: do not assume z_shift=(1, -1)
+                            # TODO: fix bugs in Z offsets
+                            y_offset = max(child_entity.collision.face_position[1] - y, 0)
+                            x_offset = max(x - \
+                                       child_entity.collision.face_position[0] + \
+                                       child_entity.collision.face_size[0], 0)
+                            z -= min(x_offset, y_offset)
+                # Order of children:
+                # 1. Children with Z-levels, sorted from lowest to highest
+                # 2. Children without Z-levels
+                # All ties are broken by newer child being placed after the old
+                # When drawing, the last child should be addressed.
+
+                # Items with Z-level are added before the first item that either
+                # has higher Z-level than this child, or has no Z-level at all
+                have_added = False
+                if z:
+                    for index, other in enumerate(self._child_pointers[pos[1] + y][pos[0] + x]):
+                        if not other.z_level or other.z_level > z:
+                            self._child_pointers[pos[1] + y][pos[0] + x].insert(index, child)
+                            have_added = True
+                            break
+                        elif other.z_level == z:
+                            self._child_pointers[pos[1] + y][pos[0] + x].insert(index + 1, child)
+                            have_added = True
+                            break
+                # If no such child was encountered (eg this is the highest item,
+                # or no Z-levelled items are present in child_pointers), or the
+                # child has no Z-level, it is added to the end
+                if not have_added:
+                    self._child_pointers[pos[1] + y][pos[0] + x].append(child)
+
     def _rebuild_self(self):
         """
         Same as `Layout()._rebuild_self`, but all child positions are also
@@ -248,53 +328,15 @@ class ScrollableECSLayout(Layout):
         colors = copy_shape(chars, 'white')
         for line in range(self.view_size[1]):
             for char in range(self.view_size[0]):
-                highest_z = 0
-                col = None
-                c = ' '
-                # TODO: keep child_pointers sorted by Z-level
-                # That way, we can pick the highest child instead of checking
-                # for each goddamn character
                 for child in self._child_pointers[self.view_pos[1] + line] \
-                                     [self.view_pos[0] + char][::]:
-                    # Select char and color from widget with highest Z-level.
-                    # If two widgets are equally Z-high, pick newer one.
-                    child_z = child.z_level
-                    if id(child) in self.widget_to_entity and hasattr(self.widget_to_entity[id(child)], 'collision') and self.widget_to_entity[id(child)].collision.face_size != (0, 0):
-                        # Checking that the child belongs to the entity and that
-                        # this entity has CollisionComponent. with face. If so,
-                        # Z-levels are corrected to account for depth
-                        child_entity = self.widget_to_entity[id(child)]
-                        c_x = self.view_pos[0] + char - self.child_locations[child][0]
-                        c_y = self.view_pos[1] + line - self.child_locations[child][1]
-                        if not (child_entity.collision.face_position[0] <= c_x <= child_entity.collision.face_position[0] + child_entity.collision.face_size[0]) or \
-                                not (child_entity.collision.face_position[1] <= c_y <= child_entity.collision.face_position[1] + child_entity.collision.face_size[1]):
-                            # Outside child's face, Z correction applies
-                            # TODO: do not assume z_shift=(1, -1)
-                            y_offset = child_entity.collision.face_position[1] - c_y
-                            x_offset = c_x - (child_entity.collision.face_position[0]+child_entity.collision.face_size[0])
-                            child_z -= max(x_offset, y_offset)
-                    if child_z >= highest_z:
-                        try:
-                            tmp_c = child.chars[
-                                self.view_pos[1] + line - self.child_locations[child][
-                                    1]] \
-                                [self.view_pos[0] + char - self.child_locations[child][
-                                    0]]
-                        # TODO: Figure out IndexError in scrollableECSLayout
-                        # Crashes with IndexError seemingly out of nowhere in
-                        # the middle of level
-                        except IndexError:
-                            tmp_c = ' '
-                        if tmp_c in (' ', None):
-                            continue
-                        else:
-                            highest_z = child_z
-                            c = tmp_c
-                            col = child.colors[
-                                self.view_pos[1] + line - self.child_locations[child][1]] \
-                                [self.view_pos[0] + char - self.child_locations[child][0]]
-                chars[line][char] = c
-                colors[line][char] = col
+                                     [self.view_pos[0] + char][::-1]:
+                    c_x = self.view_pos[0] + char - self.child_locations[child][
+                        0]
+                    c_y = self.view_pos[1] + line - self.child_locations[child][1]
+                    if child.chars[c_y][c_x] not in (' ', None):
+                        chars[line][char] = child.chars[c_y][c_x]
+                        colors[line][char] = child.colors[c_y][c_x]
+                        break
         self.chars = chars
         self.colors = colors
 
@@ -387,7 +429,6 @@ class ScrollableECSLayout(Layout):
                 # Silently ignore attempts to move nonexistent children
                 # Some entities may not be shown right now, but still have a
                 # PositionComponent that moves and emits events
-                print(entity_id)
                 return
             # Checking if collision events need to be emitted
             # Check for collisions with border
