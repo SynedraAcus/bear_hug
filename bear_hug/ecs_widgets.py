@@ -224,6 +224,11 @@ class ScrollableECSLayout(Layout):
         self.entities = {}
         self.widgets = {}
         self.widget_to_entity = {} # A dict from id(widget) to entity
+        self.z_values = copy_shape(chars, None)
+        # copy_shape does not work with lists correctly, so.
+        for line in range(len(self.z_values)):
+            for char in range(len(self.z_values[0])):
+                self.z_values[line][char] = []
         super().__init__(chars, colors)
         self.view_pos = view_pos[:]
         self.view_size = view_size[:]
@@ -285,12 +290,15 @@ class ScrollableECSLayout(Layout):
                                      child_entity.collision.face_size[1]):
                             # Outside child's face, Z correction applies
                             # TODO: do not assume z_shift=(1, -1)
-                            # TODO: fix bugs in Z offsets
-                            y_offset = max(child_entity.collision.face_position[1] - y, 0)
-                            x_offset = max(x - \
-                                       child_entity.collision.face_position[0] + \
-                                       child_entity.collision.face_size[0], 0)
-                            z -= min(x_offset, y_offset)
+                            y_offset = child_entity.collision.face_position[1] - y
+                            x_offset = x - child_entity.collision.face_size[0] + \
+                                       child_entity.collision.face_position[0]
+                            if y_offset > 0 and x_offset <= 0:
+                                z -= y_offset
+                            elif x_offset > 0 and y_offset <= 0:
+                                z -= x_offset
+                            else:
+                                z -= max(x_offset, y_offset)
                 # Order of children:
                 # 1. Children with Z-levels, sorted from lowest to highest
                 # 2. Children without Z-levels
@@ -301,20 +309,32 @@ class ScrollableECSLayout(Layout):
                 # has higher Z-level than this child, or has no Z-level at all
                 have_added = False
                 if z:
-                    for index, other in enumerate(self._child_pointers[pos[1] + y][pos[0] + x]):
-                        if not other.z_level or other.z_level > z:
+                    for index, other_z in enumerate(self.z_values[pos[1] + y][pos[0] + x]):
+                        if not other_z or other_z > z:
+                            self.z_values[pos[1] + y][pos[0] + x].insert(index, z)
                             self._child_pointers[pos[1] + y][pos[0] + x].insert(index, child)
-                            have_added = True
-                            break
-                        elif other.z_level == z:
-                            self._child_pointers[pos[1] + y][pos[0] + x].insert(index + 1, child)
                             have_added = True
                             break
                 # If no such child was encountered (eg this is the highest item,
                 # or no Z-levelled items are present in child_pointers), or the
                 # child has no Z-level, it is added to the end
+                #
                 if not have_added:
+                    self.z_values[pos[1] + y][pos[0] + x].append(None)
                     self._child_pointers[pos[1] + y][pos[0] + x].append(child)
+                assert len(self.z_values[pos[1] + y][pos[0] + x]) == len(self._child_pointers[pos[1] + y][pos[0] + x])
+
+    def remove_child(self, child, remove_completely=True):
+        for y in range(len(child.chars)):
+            for x in range(len(child.chars[0])):
+                try:
+                    # TODO: avoid rebuilding z list
+                    index = self._child_pointers[self.child_locations[child][1] + y][self.child_locations[child][0] + x].index(child)
+                    del self.z_values[self.child_locations[child][1] + y]  \
+                                     [self.child_locations[child][0] + x][index]
+                except KeyError:
+                    pass
+        super().remove_child(child, remove_completely)
 
     def _rebuild_self(self):
         """
