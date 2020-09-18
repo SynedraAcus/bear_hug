@@ -492,7 +492,6 @@ class Layout(Widget):
         """
         Build fresh chars and colors for self
         """
-        # TODO: Support needs_redraw like in ECSLayout
         chars = copy_shape(self.chars, ' ')
         colors = copy_shape(self.colors, None)
         for line in range(len(chars)):
@@ -530,6 +529,7 @@ class Layout(Widget):
             self._rebuild_self()
             if isinstance(self.parent, BearTerminal):
                 self.terminal.update_widget(self)
+            self.needs_redraw = False
     
     #Service
     def get_absolute_pos(self, relative_pos):
