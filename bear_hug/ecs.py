@@ -17,7 +17,7 @@ and then deserialized.
 """
 
 from bear_hug.bear_utilities import BearECSException, BearJSONException, \
-    rectangles_collide
+    Singleton, rectangles_collide
 from bear_hug.widgets import Widget, Listener, deserialize_widget,\
     SwitchingWidget
 from bear_hug.event import BearEvent, BearEventDispatcher
@@ -194,22 +194,6 @@ class Component(Listener):
     def __str__(self):
         owner = self.owner.id if self.owner else 'nobody'
         return f'{type(self).__name__} at {id(self)} attached to {owner}'
-
-
-# Copypasting SO is the only correct way to program
-# https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
-# TODO: move Singleton to bear_utilities?
-class Singleton(type):
-    """
-    A Singleton metaclass for EntityTracker
-    """
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args,
-                                                                 **kwargs)
-        return cls._instances[cls]
 
 
 class EntityTracker(Listener, metaclass=Singleton):

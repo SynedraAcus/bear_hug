@@ -379,7 +379,7 @@ class Layout(Widget):
         # case someone wants to add background later
         w = Widget(self.chars, self.colors)
         self.add_child(w, pos=(0, 0))
-        self.need_redraw = False
+        self.needs_redraw = False
     
     @property
     def terminal(self):
@@ -430,6 +430,7 @@ class Layout(Widget):
         for y in range(len(child.chars)):
             for x in range(len(child.chars[0])):
                 self._child_pointers[pos[1] + y][pos[0] + x].append(child)
+        self.needs_redraw = True
 
     def remove_child(self, child, remove_completely=True):
         """
@@ -449,6 +450,7 @@ class Layout(Widget):
             for x in range(len(child.chars[0])):
                 self._child_pointers[self.child_locations[child][1] + y] \
                         [self.child_locations[child][0] + x].remove(child)
+                self.needs_redraw = True
         if remove_completely:
             del(self.child_locations[child])
             self.children.remove(child)
@@ -481,10 +483,10 @@ class Layout(Widget):
         for row in range(len(self.chars)):
             for column in range(len(self.chars[0])):
                 self._child_pointers[row][column][0] = value
-                # self.colors[row][column][0] = value
         del self.child_locations[self.children[0]]
         self.child_locations[value] = (0, 0)
         self.children[0] = value
+        self.needs_redraw = True
         
     def _rebuild_self(self):
         """
@@ -523,7 +525,8 @@ class Layout(Widget):
         """
         Redraw itself on every tick
         """
-        if event.event_type == 'service' and event.event_value == 'tick_over':
+        if event.event_type == 'service' and event.event_value == 'tick_over'\
+                and self.needs_redraw:
             self._rebuild_self()
             if isinstance(self.parent, BearTerminal):
                 self.terminal.update_widget(self)

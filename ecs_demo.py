@@ -6,8 +6,7 @@ An ECS test.
 from bear_hug.bear_hug import BearTerminal, BearLoop
 from bear_hug.bear_utilities import copy_shape
 from bear_hug.ecs import Entity, Component, WidgetComponent,\
-    CollisionComponent, PositionComponent, WalkerCollisionComponent,\
-    PassingComponent, EntityTracker
+    CollisionComponent, PositionComponent, WalkerCollisionComponent,EntityTracker
 from bear_hug.ecs_widgets import ECSLayout
 from bear_hug.event import BearEventDispatcher, BearEvent
 from bear_hug.resources import Atlas, XpLoader
@@ -15,6 +14,8 @@ from bear_hug.sound import SoundListener
 from bear_hug.widgets import ClosingListener, Widget, FPSCounter, MousePosWidget,\
     Layout, SimpleAnimationWidget, Animation, Label, \
     deserialize_widget
+
+# TODO: use Battle City thing as an ECS demo
 
 
 class DevMonitor(Layout):
@@ -113,9 +114,6 @@ def create_barrel(atlas, dispatcher, x, y):
     widget_component = WidgetComponent(dispatcher, widget, owner=barrel_entity)
     position_component = PositionComponent(dispatcher, x=x, y=y,
                                            owner=barrel_entity)
-    passing = PassingComponent(dispatcher, shadow_pos=(0, 7),
-                               shadow_size=None,
-                               owner=barrel_entity)
     collision = CollisionComponent(dispatcher, owner=barrel_entity)
     dispatcher.add_event(BearEvent(event_type='ecs_create',
                                    event_value=barrel_entity))
