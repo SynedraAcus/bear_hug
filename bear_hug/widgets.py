@@ -522,7 +522,7 @@ class Layout(Widget):
     
     def on_event(self, event):
         """
-        Redraw itself on every tick
+        Redraw itself, if necessary
         """
         if event.event_type == 'service' and event.event_value == 'tick_over'\
                 and self.needs_redraw:
@@ -1348,6 +1348,7 @@ class MenuWidget(Layout):
         self.items[self._current_highlight].unhighlight()
         self._current_highlight = value
         self.items[self._current_highlight].highlight()
+        self.needs_redraw = True
 
     def on_event(self, event):
         r = None
@@ -1405,6 +1406,13 @@ class MenuWidget(Layout):
                         raise TypeError(f'MenuItem action returned {type(e)} instead of a BearEvent')
         else:
             ret = []
+        for item in self.items:
+            # Pass all events to items. Necessary for correct redrawing (ie
+            # setting need_redraw on MenuItem instances after (de)highlighting),
+            # could be useful otherwise.
+            response = item.on_event(event)
+            if response:
+                ret.append(item)
         if self.switch_sound and have_switched:
             ret.append(BearEvent('play_sound', self.switch_sound))
         if self.activation_sound and have_activated:
@@ -1466,7 +1474,7 @@ class MenuItem(Layout):
         """
         self.background.colors = copy_shape(self.background.colors,
                                             self.highlight_color)
-        self._rebuild_self()
+        self.needs_redraw = True
 
     def unhighlight(self):
         """
@@ -1475,7 +1483,7 @@ class MenuItem(Layout):
         """
         self.background.colors = copy_shape(self.background.colors,
                                             self.color)
-        self._rebuild_self()
+        self.needs_redraw = True
 
     def activate(self):
         """
