@@ -394,10 +394,17 @@ class XpLoader(ASCIILoader):
         keycode = int(base64.b16encode(keycode), 16)
         # Processing characters that are redefined by IBM437 from ASCII control
         # sequences and are thus not correctly decoded by `.decode('cp437')`
+        #
+        # Chars are immediately converted to Unicode codepoints because
+        # otherwise bearlibterminal does this conversion every single time the
+        # char is drawn. This solution still allows widgets (eg procedurally
+        # generated ones) to hold chars as str, but makes sure all
+        # Atlas-imported ones are run as efficiently as possible. Basically
+        # trades load time for run time.
         if keycode in self.fix_chars:
-            char = self.fix_chars[keycode]
+            char = ord(self.fix_chars[keycode])
         else:
-            char = bytes([keycode]).decode('cp437')
+            char = ord(bytes([keycode]).decode('cp437'))
         if not char or char == '\x00':
             char = ' '
         offset += self.layer_keycode_bytes

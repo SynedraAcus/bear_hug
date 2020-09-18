@@ -170,8 +170,6 @@ class Widget:
 
     :param z_level: a Z-level to determine objects' overlap. Used by (Scrollable)ECSLayout. Not to be mixed up with a terminal layer, these are two independent systems.
     """
-    #TODO: maybe support background colour after all?
-    
     def __init__(self, chars, colors, z_level=0):
         if not isinstance(chars, list) or not isinstance(colors, list):
             raise BearException('Chars and colors should be lists')
@@ -507,7 +505,7 @@ class Layout(Widget):
                         tmp_c = child.chars \
                             [line - self.child_locations[child][1]] \
                             [char - self.child_locations[child][0]]
-                        if c != ' ' and tmp_c == ' ':
+                        if c != ' ' and tmp_c in (' ', 32, None):
                             continue
                         else:
                             highest_z = child.z_level

@@ -318,7 +318,7 @@ class BearTerminal:
         pos = self.widget_locations[widget].pos
         layer = self.widget_locations[widget].layer
         terminal.layer(layer)
-        terminal.clear_area(*self.widget_locations[widget].pos, widget.width, widget.height)
+        #terminal.clear_area(*self.widget_locations[widget].pos, widget.width, widget.height)
         running_color = self.default_color
         for y in range(widget.height):
             for x in range(widget.width):
@@ -444,7 +444,7 @@ class BearLoop:
     :param fps: a number of times per second this loop should process events.
     """
 
-    def __init__(self, terminal, queue, fps=30):
+    def __init__(self, terminal, queue, fps=30, profile=False):
         # Assumes terminal to be running
         self.terminal = terminal
         self.queue = queue
@@ -453,6 +453,7 @@ class BearLoop:
         self.frame_time = 1/fps
         self.stopped = False
         self.last_time = 0
+        self.profile = profile
         
     def run(self):
         """

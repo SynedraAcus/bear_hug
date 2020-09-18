@@ -221,14 +221,13 @@ class BearEventDispatcher:
             for listener in self.listeners[e.event_type]:
                 r = listener.on_event(e)
                 if r:
-                    if isinstance(r, BearEvent):
-                        self.add_event(r)
-                    elif isinstance(r, list):
+                    # Assumes that r is either a BearEvent or a list thereof
+                    # If not so, self.add_event throws an exception
+                    if isinstance(r, list):
                         for event in r:
                             self.add_event(event)
                     else:
-                        raise BearLoopException('on_event returns something ' +
-                                                'other than BearEvent')
+                        self.add_event(r)
 
     def dump_queue(self):
         """
