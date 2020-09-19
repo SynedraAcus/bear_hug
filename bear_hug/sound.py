@@ -71,8 +71,8 @@ class SoundListener(Listener, metaclass=Singleton):
         if isinstance(sound, sa.WaveObject):
             self.sounds[sound_name] = sound
         elif isinstance(sound, str):
-            self.sounds[sound_name] = sa.WaveObject.from_wave_read(
-                    wave.open(sound, 'rb'))
+            self.sounds[sound_name] = sa.WaveObject.from_wave_file(
+                    sound)
         else:
             raise BearSoundException(
                 'Sound should be either WaveObject or string')
