@@ -170,8 +170,6 @@ class Widget:
 
     :param z_level: a Z-level to determine objects' overlap. Used by (Scrollable)ECSLayout. Not to be mixed up with a terminal layer, these are two independent systems.
     """
-    #TODO: maybe support background colour after all?
-    
     def __init__(self, chars, colors, z_level=0):
         if not isinstance(chars, list) or not isinstance(colors, list):
             raise BearException('Chars and colors should be lists')
@@ -379,7 +377,7 @@ class Layout(Widget):
         # case someone wants to add background later
         w = Widget(self.chars, self.colors)
         self.add_child(w, pos=(0, 0))
-        self.need_redraw = False
+        self.needs_redraw = False
     
     @property
     def terminal(self):
@@ -430,6 +428,7 @@ class Layout(Widget):
         for y in range(len(child.chars)):
             for x in range(len(child.chars[0])):
                 self._child_pointers[pos[1] + y][pos[0] + x].append(child)
+        self.needs_redraw = True
 
     def remove_child(self, child, remove_completely=True):
         """
@@ -449,6 +448,7 @@ class Layout(Widget):
             for x in range(len(child.chars[0])):
                 self._child_pointers[self.child_locations[child][1] + y] \
                         [self.child_locations[child][0] + x].remove(child)
+                self.needs_redraw = True
         if remove_completely:
             del(self.child_locations[child])
             self.children.remove(child)
@@ -481,16 +481,15 @@ class Layout(Widget):
         for row in range(len(self.chars)):
             for column in range(len(self.chars[0])):
                 self._child_pointers[row][column][0] = value
-                # self.colors[row][column][0] = value
         del self.child_locations[self.children[0]]
         self.child_locations[value] = (0, 0)
         self.children[0] = value
+        self.needs_redraw = True
         
     def _rebuild_self(self):
         """
         Build fresh chars and colors for self
         """
-        # TODO: Support needs_redraw like in ECSLayout
         chars = copy_shape(self.chars, ' ')
         colors = copy_shape(self.colors, None)
         for line in range(len(chars)):
@@ -506,7 +505,7 @@ class Layout(Widget):
                         tmp_c = child.chars \
                             [line - self.child_locations[child][1]] \
                             [char - self.child_locations[child][0]]
-                        if c != ' ' and tmp_c == ' ':
+                        if c != ' ' and tmp_c in (' ', 32, None):
                             continue
                         else:
                             highest_z = child.z_level
@@ -521,12 +520,14 @@ class Layout(Widget):
     
     def on_event(self, event):
         """
-        Redraw itself on every tick
+        Redraw itself, if necessary
         """
-        if event.event_type == 'service' and event.event_value == 'tick_over':
+        if event.event_type == 'service' and event.event_value == 'tick_over'\
+                and self.needs_redraw:
             self._rebuild_self()
             if isinstance(self.parent, BearTerminal):
                 self.terminal.update_widget(self)
+            self.needs_redraw = False
     
     #Service
     def get_absolute_pos(self, relative_pos):
@@ -1345,6 +1346,7 @@ class MenuWidget(Layout):
         self.items[self._current_highlight].unhighlight()
         self._current_highlight = value
         self.items[self._current_highlight].highlight()
+        self.needs_redraw = True
 
     def on_event(self, event):
         r = None
@@ -1402,6 +1404,13 @@ class MenuWidget(Layout):
                         raise TypeError(f'MenuItem action returned {type(e)} instead of a BearEvent')
         else:
             ret = []
+        for item in self.items:
+            # Pass all events to items. Necessary for correct redrawing (ie
+            # setting need_redraw on MenuItem instances after (de)highlighting),
+            # could be useful otherwise.
+            response = item.on_event(event)
+            if response:
+                ret.append(item)
         if self.switch_sound and have_switched:
             ret.append(BearEvent('play_sound', self.switch_sound))
         if self.activation_sound and have_activated:
@@ -1463,7 +1472,7 @@ class MenuItem(Layout):
         """
         self.background.colors = copy_shape(self.background.colors,
                                             self.highlight_color)
-        self._rebuild_self()
+        self.needs_redraw = True
 
     def unhighlight(self):
         """
@@ -1472,7 +1481,7 @@ class MenuItem(Layout):
         """
         self.background.colors = copy_shape(self.background.colors,
                                             self.color)
-        self._rebuild_self()
+        self.needs_redraw = True
 
     def activate(self):
         """
