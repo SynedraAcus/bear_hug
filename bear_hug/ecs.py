@@ -331,6 +331,14 @@ class SwitchWidgetComponent(WidgetComponent):
         return image_id in self.widget.images
 
 
+class AnimationWidgetComponent(WidgetComponent):
+    def start(self):
+        self.widget.start()
+
+    def stop(self):
+        self.widget.stop()
+
+
 class PositionComponent(Component):
     """
     A component responsible for positioning an Entity on ECSLayout.
