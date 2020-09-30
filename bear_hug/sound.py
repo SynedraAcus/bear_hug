@@ -57,6 +57,7 @@ class SoundListener(Listener, metaclass=Singleton):
         self.sounds = sounds
         self.bg_sound = None
         self.bg_buffer = None
+        self.enabled = True
         
     def register_sound(self, sound, sound_name):
         """
@@ -90,11 +91,18 @@ class SoundListener(Listener, metaclass=Singleton):
             raise BearSoundException(
                 f'Nonexistent sound {sound_name} requested')
         return self.sounds[sound_name].play()
+
+    def turn_on(self):
+        self.enabled = True
+
+    def turn_off(self):
+        self.enabled = False
+        self.bg_buffer.stop()
     
     def on_event(self, event):
-        if event.event_type == 'play_sound':
+        if event.event_type == 'play_sound' and self.enabled:
             self.play_sound(event.event_value)
-        elif event.event_type == 'set_bg_sound':
+        elif event.event_type == 'set_bg_sound' and self.enabled:
             if event.event_value:
                 if self.bg_sound != event.event_value:
                     self.bg_sound = event.event_value
@@ -107,5 +115,5 @@ class SoundListener(Listener, metaclass=Singleton):
                 self.bg_buffer = None
                 self.bg_sound = None
         elif event.event_type == 'tick' and self.bg_sound:
-            if not self.bg_buffer.is_playing():
+            if self.enabled and not self.bg_buffer.is_playing():
                 self.bg_buffer = self.play_sound(self.bg_sound)
