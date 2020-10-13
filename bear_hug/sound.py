@@ -94,21 +94,25 @@ class SoundListener(Listener, metaclass=Singleton):
 
     def turn_on(self):
         self.enabled = True
+        if self.bg_sound is not None:
+            self.bg_buffer = self.play_sound(self.bg_sound)
 
     def turn_off(self):
         self.enabled = False
-        self.bg_buffer.stop()
+        if self.bg_buffer is not None and self.bg_buffer.is_playing:
+            self.bg_buffer.stop()
     
     def on_event(self, event):
         if event.event_type == 'play_sound' and self.enabled:
             self.play_sound(event.event_value)
-        elif event.event_type == 'set_bg_sound' and self.enabled:
+        elif event.event_type == 'set_bg_sound':
             if event.event_value:
                 if self.bg_sound != event.event_value:
                     self.bg_sound = event.event_value
-                    if self.bg_buffer:
-                        self.bg_buffer.stop()
-                    self.bg_buffer = self.play_sound(self.bg_sound)
+                    if self.enabled:
+                        if self.bg_buffer:
+                            self.bg_buffer.stop()
+                        self.bg_buffer = self.play_sound(self.bg_sound)
             else:
                 if self.bg_buffer:
                     self.bg_buffer.stop()
