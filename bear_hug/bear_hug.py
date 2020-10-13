@@ -226,6 +226,30 @@ class BearTerminal:
         """
         terminal.close()
 
+    @property
+    def fullscreen(self):
+        return bool(terminal.get('window.fullscreen'))
+
+    @fullscreen.setter
+    def fullscreen(self, value):
+        """
+        Switch between fullscreen and windowed mode
+        :return:
+        """
+        if not isinstance(value, bool):
+            raise TypeError('terminal.fullscreen only accepts boolean argument')
+        # TODO: fix char scaling in fullscreen
+        if value:
+            # terminal.set(
+            #     'font: {}, size=12x12, resize=16x16, codepage=437'.format(self.font_path))
+            # terminal.set('window.cellsize: 16x16; window.fullscreen=true')
+            terminal.set('window.fullscreen=true')
+        else:
+            # terminal.set(
+            #     'font: {}, size=12x12, codepage=437'.format(
+            #         self.font_path))
+            # terminal.set("window.cellsize:auto; window.fullscreen=false")
+             terminal.set('window.fullscreen=false')
     #  Drawing and removing stuff
 
     def add_widget(self, widget,
