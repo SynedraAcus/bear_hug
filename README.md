@@ -35,6 +35,7 @@ font support.
 By the way, pull requests are always welcome.
 
 ### Any examples of the games made with `bear_hug`?
+
 I've used it for a [gravity-controlled Tetris variant](https://ldjam.com/events/ludum-dare/41/indirectris):
 
 ![Indirectris screenshot](fd24.png)
@@ -44,13 +45,20 @@ It's in a very early stage of development, though.
 
 ### Where's the documentation?
 API reference is available [here](https://bear-hug.readthedocs.io/en/latest/).
-A quickstart guide is currently being written. 
-
-
+An article in Russian describing the implementation of a simple helloworld-y 
+game (a primitive BattleCity clone) is available
+[on Habr](https://habr.com/ru/post/470950/),  with all code released
+[on Github](https://github.com/SynedraAcus/asciicity). It can be used as a sort
+of a quickstart guide.
 
 ### What are the dependencies?
-Bearlibterminal and Python3.6+. To use sound, you will also need
+Only Python3.6+. To use sound, you will also need
 [simpleaudio](https://simpleaudio.readthedocs.io/en/latest/).
+
+Bearlibterminal, which bear_hug wraps, is bundled with this repo. Please note
+that the bundled version is a couple commits ahead from bearlibterminal
+available from eg PyPI, featuring
+[Caseman's fullscreen patch](https://github.com/cfyzium/bearlibterminal/pull/4)
 
 ### What's the license?
 MIT, copyright 2018-2019, A. A. Morozov.

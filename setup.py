@@ -11,6 +11,6 @@ setup(
   keywords = ['gamedev', 'ascii', 'ASCII'],
   license = 'MIT',
   python_requires = '>=3.6',
-  install_requires=['bearlibterminal', 'simpleaudio'],
+  install_requires=['simpleaudio'],
   classifiers = [],
 )

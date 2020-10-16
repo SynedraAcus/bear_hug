@@ -3,13 +3,11 @@ An object-oriented bearlibterminal wrapper with the support for complex ASCII
 art and widget-like behaviour.
 """
 
-from bearlibterminal import terminal
+from bear_hug import terminal
 from bear_hug.bear_utilities import BearException,\
     BearLoopException
 from bear_hug.event import BearEvent
 
-import inspect
-import os
 import time
 from copy import copy
 from collections import namedtuple
