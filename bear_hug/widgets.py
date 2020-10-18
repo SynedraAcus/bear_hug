@@ -248,14 +248,25 @@ class Widget:
         elif axis in ('y', 'vertical'):
             self.chars = self.chars[::-1]
             self.colors = self.colors[::-1]
+
+    @staticmethod
+    def _serialize_charline(charline):
+        line = ''
+        for char in charline:
+            if isinstance(char, str):
+                line += char
+            else:
+                line += chr(char)
+        return line
             
     def __repr__(self):
-        char_strings = [''.join(x) for x in self.chars]
+        char_strings = [self._serialize_charline(x) for x in self.chars]
         for string in char_strings:
             string.replace('\"', '\u0022"').replace('\\', '\u005c')
         d = {'class': self.__class__.__name__,
              'chars': char_strings,
-             'colors': [','.join(x) for x in self.colors]}
+             'colors': [','.join(x) for x in self.colors],
+             'z_level': self.z_level}
         return dumps(d)
 
 
@@ -275,7 +286,8 @@ class SwitchingWidget(Widget):
     :param initial_image: an ID of the first image to show. Should be a key in ``images_dict``.
     """
     
-    def __init__(self, chars=None, colors=None, images_dict=None, initial_image=None):
+    def __init__(self, chars=None, colors=None,
+                 images_dict=None, initial_image=None, **kwargs):
         # Chars and colors are not used anywhere; they are included simply for
         # the compatibility with serialization. Actual chars and colors of the
         # SwitchingWidget are set to `images_dict[initial_image]` upon creation
@@ -300,7 +312,7 @@ class SwitchingWidget(Widget):
                     f'Image {image} in SwitchingWidget has incorrect size')
         if not initial_image:
             raise BearException('Initial image not set for SwitchingWidget')
-        super().__init__(*images_dict[initial_image])
+        super().__init__(*images_dict[initial_image], **kwargs)
         self.images = images_dict
         self.current_image = initial_image
     
@@ -323,17 +335,15 @@ class SwitchingWidget(Widget):
                     f'Attempting to switch to incorrect image ID {image_id}')
             
     def __repr__(self):
-        d = {'class': self.__class__.__name__,
-             'initial_image': self.current_image}
+        d = loads(super().__repr__())
         images = {}
         for image in self.images:
             images[image] = []
-            # Seems to work without any complex workarounds for screening
-            images[image].append([''.join(x)#.replace('"', '\u0022"').
-                                            # replace('\\', '\u005c')
+            images[image].append([self._serialize_charline(x)
                                   for x in self.images[image][0]])
             images[image].append([','.join(x) for x in self.images[image][1]])
         d['images_dict'] = images
+        d['initial_image'] = self.current_image
         return dumps(d)
         
         
@@ -361,8 +371,8 @@ class Layout(Widget):
 
     :param colors: colors for layout BG.
     """
-    def __init__(self, chars, colors):
-        super().__init__(chars, colors)
+    def __init__(self, chars, colors, **kwargs):
+        super().__init__(chars, colors, **kwargs)
         self.children = []
         # For every position, remember all the widgets that may want to place
         # characters in it, but draw only the latest one
@@ -576,7 +586,7 @@ class ScrollBar(Widget):
     :param colors: A 2-tuple of (BG colour, moving thingy colour)
     """
     def __init__(self, orientation='vertical', length=10,
-                 colors=('gray', 'white')):
+                 colors=('gray', 'white'), **kwargs):
         if orientation not in ('vertical', 'horizontal'):
             raise BearException(
                 'Orientation must be either vertical or horizontal')
@@ -590,7 +600,7 @@ class ScrollBar(Widget):
         self.bg_color = colors[0]
         self.bar_color = colors[1]
         colors = copy_shape(chars, self.bg_color)
-        super().__init__(chars, colors)
+        super().__init__(chars, colors, **kwargs)
         
     def show_pos(self, position, percentage):
         """
@@ -638,8 +648,8 @@ class ScrollableLayout(Layout):
     :param view_size: a 2-tuple (width, height) for the size of visible area.
     """
     def __init__(self, chars, colors,
-                 view_pos=(0, 0), view_size=(10, 10)):
-        super().__init__(chars, colors)
+                 view_pos=(0, 0), view_size=(10, 10), **kwargs):
+        super().__init__(chars, colors, **kwargs)
         if not 0 <= view_pos[0] <= self.width - view_size[0] \
                 or not 0 <= view_pos[1] <= self.height - view_size[1]:
             raise BearLayoutException('Initial viewpoint outside ' +
@@ -727,7 +737,7 @@ class InputScrollable(Layout):
     Does not support JSON serialization
     """
     def __init__(self, chars, colors, view_pos=(0, 0), view_size=(10, 10),
-                 bottom_bar=False, right_bar=False):
+                 bottom_bar=False, right_bar=False, **kwargs):
         # Scrollable is initalized before self to avoid damaging it by the
         # modified view_size (in case of scrollbars)
         scrollable = ScrollableLayout(chars, colors, view_pos, view_size)
@@ -747,7 +757,7 @@ class InputScrollable(Layout):
         # While True, can add children to self. Otherwise they are passed to
         # self.scrollable
         self.building_self = True
-        super().__init__(ch, co)
+        super().__init__(ch, co, **kwargs)
         self.scrollable = scrollable
         self.add_child(self.scrollable, pos=(0, 0))
         # Need to rebuild now to let bars know the correct height and width
@@ -846,6 +856,16 @@ class Animation:
 
     def __len__(self):
         return len(self.frames)
+
+    @staticmethod
+    def _serialize_charline(charline):
+        line = ''
+        for char in charline:
+            if isinstance(char, str):
+                line += char
+            else:
+                line += chr(char)
+        return line
     
     def __repr__(self):
         d = {'fps': self.fps}
@@ -855,7 +875,7 @@ class Animation:
         else:
             frames_dump = []
             for frame in self.frames:
-                char_strings = [''.join(x) for x in frame[0]]
+                char_strings = [self._serialize_charline(x) for x in frame[0]]
                 for string in char_strings:
                     string.replace('\"', '\u0022"').replace('\\', '\u005c')
                 colors_dump = [','.join(x) for x in frame[1]]
@@ -877,12 +897,12 @@ class SimpleAnimationWidget(Widget):
     """
     
     def __init__(self, animation, *args, is_running=True,
-                 emit_ecs=True, **kwargs):
+                 emit_ecs=True, z_level=0):
         if not isinstance(animation, Animation):
             raise BearException(
                 'Only Animation instance can be used in SimpleAnimationWidget')
         self.animation = animation
-        super().__init__(*animation.frames[0], *args, **kwargs)
+        super().__init__(*animation.frames[0], *args, z_level=z_level)
         self.running_index = 0
         self.have_waited = 0
         self.emit_ecs = emit_ecs
@@ -916,7 +936,8 @@ class SimpleAnimationWidget(Widget):
         d = {'class': self.__class__.__name__,
              'animation': repr(self.animation),
              'emit_ecs': self.emit_ecs,
-             'is_running': self.is_running}
+             'is_running': self.is_running,
+             'z_level':self.z_level}
         return dumps(d)
 
 
@@ -936,7 +957,7 @@ class MultipleAnimationWidget(Widget):
     :param cycle: if True, cycles the animation indefinitely. Otherwise stops at the last frame.
     """
     def __init__(self, animations, initial_animation,
-                 emit_ecs=True, cycle=False):
+                 emit_ecs=True, cycle=False, z_level=0):
         # Check the animations' validity
         if not isinstance(animations, dict) or \
                 any((not isinstance(x, Animation) for x in animations.values())):
@@ -948,7 +969,8 @@ class MultipleAnimationWidget(Widget):
             raise BearException('Initial animation ID should be provided')
         if initial_animation not in animations:
             raise BearException('Incorrect initial animation ID')
-        super().__init__(*animations[initial_animation].frames[0])
+        super().__init__(*animations[initial_animation].frames[0],
+                         z_level=z_level)
         self.animations = animations
         self.current_animation = initial_animation
         self.running_index = 0
@@ -1000,13 +1022,13 @@ class MultipleAnimationWidget(Widget):
         self.am_running = True
         
     def __repr__(self):
-        d = {'class': self.__class__.__name__,
+        d = {'class': self.__class__.name,
              'animations': {x: repr(self.animations[x])
                             for x in self.animations},
-             # Start from whichever animation was displayed during saving
              'initial_animation': self.current_animation,
              'emit_ecs': self.emit_ecs,
              'cycle': self.cycle}
+        # Start from whichever animation was displayed during saving
         return dumps(d)
 
 
@@ -1294,7 +1316,7 @@ class MenuWidget(Layout):
                 for x in range(len(bg_chars[0]) - 2):
                     bg_chars[y + 1][x + 1] = '\u2588'
                     bg_colors[y + 1][x + 1] = 'black'
-            super().__init__(bg_chars, bg_colors)
+            super().__init__(bg_chars, bg_colors, **kwargs)
         else:
             if background.width < self.w or background.height < self.h:
                 raise BearLayoutException('Background for MenuWidget is too small')

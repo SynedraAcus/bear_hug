@@ -121,7 +121,7 @@ class Component(Listener):
     deserializer to determine what to create. All other keys will be
     deserialized and treated as kwargs to a newly-created object. To define the
     deserialization protocol, JSON dict may also contain keys formatted as
-    ``{kwarg_name}_type`` which should be a string and will be eval-ed as during
+    ``{kwarg_name}_dtype`` which should be a string and will be eval-ed during
     deserialization. Only Python's builtin converters (eg ``str``, ``int`` or
     ``float``) are allowed; custom ones are currently unsupported.
 
@@ -235,8 +235,12 @@ class EntityTracker(Listener, metaclass=Singleton):
         if not hasattr(key, '__call__'):
             raise ValueError('EntityTracker requires callable for a key')
         for entity_id in self.entities:
+            # try:
             if key(self.entities[entity_id]):
                 yield self.entities[entity_id]
+            # except AttributeError:
+            #     print(entity_id, repr(self.entities[entity_id].faction.faction))
+                # quit()
 
 
 class WidgetComponent(Component):
@@ -474,7 +478,8 @@ class PositionComponent(Component):
              'y': self.y,
              'vx': self.vx,
              'vy': self.vy,
-             'last_move': self.last_move}
+             'last_move': self.last_move,
+             'affect_z': self.affect_z}
         return dumps(d)
                 
 
@@ -604,6 +609,15 @@ class CollisionComponent(Component):
 
     def collided_by(self, entity):
         pass
+
+    def __repr__(self):
+        d = loads(super().__repr__())
+        d['depth'] = self.depth
+        d['z_shift'] = self.z_shift
+        d['face_position'] = self.face_position
+        d['face_size'] = self.face_size
+        d['passable'] = self.passable
+        return dumps(d)
 
 
 class WalkerCollisionComponent(CollisionComponent):
@@ -758,7 +772,7 @@ class CollisionListener(Listener):
                     # Only check if two entities are within collidable z-levels
                     other_face = other.collision.face_position
                     other_face_size = other.collision.face_size
-                    if other_face_size == (0, 0):
+                    if other_face_size in ((0, 0), [0, 0]):
                         # The interaction is unclean, but it prevents running
                         # through this check every time something moves
                         other.collision.face_size = other.widget.size
@@ -787,6 +801,8 @@ def deserialize_component(serial, dispatcher):
     deserialized Component should be imported by the code that calls this
     function, or someone within its call stack.
 
+    If there is a risk that
+
     :param serial: A valid JSON string or a dict produced by deserializing such a string.
 
     :param dispatcher: A queue passed to the ``Component.__init__``
@@ -808,7 +824,7 @@ def deserialize_component(serial, dispatcher):
     # be provided like with classes, IMO this way is safer
     converters = {}
     for key in d:
-        if '_type' in key:
+        if '_dtype' in key:
             converters[key[:-5]] = globals()['__builtins__'][d[key]]
     types = [x for x in d if '_type' in x]
     for t in types:
