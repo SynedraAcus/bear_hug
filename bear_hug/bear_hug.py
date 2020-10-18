@@ -3,7 +3,12 @@ An object-oriented bearlibterminal wrapper with the support for complex ASCII
 art and widget-like behaviour.
 """
 
-from bear_hug import terminal
+try:
+    from bear_hug import terminal
+except RuntimeError:
+    # Falling back to system installation of bearlibterminal if
+    # DLLs are not available
+    from bearlibterminal import terminal
 from bear_hug.bear_utilities import BearException,\
     BearLoopException
 from bear_hug.event import BearEvent
